@@ -32,6 +32,15 @@
     {skin:"#f1cba2", hair:"#6b4a28", shirt:"#3fae84", style:"long"},
     {skin:"#a87a55", hair:"#101010", shirt:"#c0843c", style:"cap"},
   ];
+  // 真人示範頭像(同源圖片 → canvas 不會被污染);路徑相對於 web/index.html
+  const PHOTOS = [["小明","demo/face1.png"],["Aki","demo/face2.png"]].map(([name,src])=>{
+    const im=new Image(); im.src=src; return {name, im}; });
+  function facePick(){
+    const p=PHOTOS[Math.floor(S.t/5)%PHOTOS.length], matching=(S.t%5)<1.2;
+    const sz=W*0.5, x=(W-sz)/2, y=W*0.15;
+    const box=[Math.round(x+sz*0.22),Math.round(y+sz*0.1),Math.round(sz*0.56),Math.round(sz*0.72)];
+    return {p, matching, sim:+(0.68+0.06*Math.sin(S.t*2)).toFixed(2), box, x, y, sz};
+  }
   const shade=(hex,a)=>{ const n=parseInt(hex.slice(1),16);
     const r=Math.max(0,Math.min(255,(n>>16)+a)), gc=Math.max(0,Math.min(255,((n>>8)&255)+a)),
           b=Math.max(0,Math.min(255,(n&255)+a)); return `rgb(${r},${gc},${b})`; };
@@ -116,9 +125,6 @@
       skew: ok?2:13, oob:!ok, reason:"" }; }
   function gestureNow(){ const seq=[["PALM",5],["FIST",0],["ONE",1],["TWO",2],["OK",3]];
     const s=seq[Math.floor(S.t*0.5)%seq.length]; return {g:s[0], n:s[1]}; }
-  function faceNow(){ const names=Object.keys(S.faces); const pool=names.length?names.concat(["未知"]):["未知"];
-    const idx=Math.floor(S.t/5)%pool.length, name=pool[idx];
-    return {name, known:name!=="未知", look:name==="未知"?LOOKS[3]:LOOKS[idx%LOOKS.length], sim:name==="未知"?0.12:+(0.68+0.06*Math.sin(S.t*2)).toFixed(2)}; }
   const OZONE=[[W*0.30,W*0.16],[W*0.72,W*0.16],[W*0.72,W*0.60],[W*0.30,W*0.60]];
   function obstacleSim(){ const objX=W*0.5+Math.sin(S.t*0.55)*W*0.34, objY=W*0.38;
     const inZone=pointIn(OZONE,objX,objY); return {objX,objY,inZone,dist:inZone?0.6:2.4,r:W*0.06}; }
@@ -167,12 +173,14 @@
   }
   function sceneFace(){
     roomBg();
-    const fc=faceNow(), f=fig(W*0.5, W*0.46, W*0.13, 0);
-    avatar(f, fc.look, false);
-    const b=headBox(f); g.lineWidth=3; g.strokeStyle=fc.known?"#33dd66":"#ffaa3c"; g.strokeRect(b[0],b[1],b[2],b[3]);
-    tag(b[0], b[1]-10, fc.known?`${fc.name}  ${fc.sim}`:"未知", fc.known?"#33dd66":"#ffaa3c", true);
-    return fc.known ? `🙂 人臉辨識 · 認出「${fc.name}」(相似度 ${fc.sim})`
-                    : "🙂 人臉辨識 · 陌生人 → 標記「未知」";
+    const fp=facePick(), p=fp.p;
+    if(p.im.complete && p.im.naturalWidth) g.drawImage(p.im, fp.x, fp.y, fp.sz, fp.sz);
+    else { const f=fig(W*0.5,W*0.46,W*0.13,0); avatar(f,LOOKS[0],false); }   // 圖未載入 → 退回卡通
+    const col=fp.matching?"#ffd23c":"#33dd66";
+    g.lineWidth=3; g.strokeStyle=col; g.strokeRect(fp.box[0],fp.box[1],fp.box[2],fp.box[3]);
+    tag(fp.box[0], fp.box[1]-10, fp.matching?"比對中…":`${p.name}  ${fp.sim}`, col, true);
+    return fp.matching ? "🙂 人臉辨識 · 比對特徵中…"
+                       : `🙂 人臉辨識 · 認出「${p.name}」(相似度 ${fp.sim})`;
   }
   function sceneObstacle(){
     roomBg();
@@ -242,7 +250,7 @@
     if(c.measure) st.measure=measureVals();
     if(c.inspect) st.inspect=inspectVals();
     const names=Object.keys(S.faces); st.faces_db=names.map(n=>({name:n,samples:S.faces[n]}));
-    if(c.face){ const fc=faceNow(); st.faces=[{name:fc.name, score:fc.sim, box:headBox(fig(W*0.5,W*0.46,W*0.13,0))}]; } else st.faces=[];
+    if(c.face){ const fp=facePick(); st.faces=[{name:fp.matching?"未知":fp.p.name, score:fp.matching?0.1:fp.sim, box:fp.box}]; } else st.faces=[];
     st.face_engine=c.face_engine||"lbph"; st.arc_available=true;
     const thr=c.obstacle_dist||1.0;
     if(c.obstacle){ if(S.regions.length){
