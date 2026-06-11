@@ -1,0 +1,8 @@
+pyrealsense2>=2.58
+mediapipe>=0.10.35
+opencv-python>=4.13
+numpy
+fastapi>=0.110
+uvicorn>=0.27
+requests>=2.31
+pillow>=10.0

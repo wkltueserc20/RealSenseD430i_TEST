@@ -1,0 +1,17 @@
+# Rust build output (1.5GB - never commit)
+robot_ui/target/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Runtime / generated outputs
+scans/
+falls/
+*.log
+
+# OS / editor
+Thumbs.db
+.DS_Store
+.vscode/

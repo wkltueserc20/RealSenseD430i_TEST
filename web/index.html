@@ -1,0 +1,1173 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+<title>D435i · 光學深度量測台</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=IBM+Plex+Mono:wght@400;500;600&family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet" />
+<style>
+:root{
+  --ink:#141009; --ink2:#1a160e; --panel:#201b12; --panel2:#28221688;
+  --line:#3b3325; --line2:#4a4130;
+  --bone:#efe7d6; --dim:#b6ac96; --muted:#857a64;
+  --signal:#ff7a1a; --signal-d:#c85a08;
+  --mint:#a9e8a0; --mint-d:#5fae6a;
+  --warn:#ff5a48;
+  --r:14px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  font-family:"Noto Sans TC","IBM Plex Mono",sans-serif;
+  background:var(--ink); color:var(--bone);
+  -webkit-font-smoothing:antialiased; overflow-x:hidden;
+  background-image:
+    radial-gradient(120% 80% at 80% -10%, #2a2113 0%, transparent 55%),
+    radial-gradient(100% 90% at -10% 110%, #1d2418 0%, transparent 50%);
+}
+/* 細網格 + 顆粒 + 暈影 疊在最上層 */
+.fx{position:fixed; inset:0; pointer-events:none; z-index:99}
+.fx.grid{
+  background-image:linear-gradient(var(--line) 1px,transparent 1px),
+                   linear-gradient(90deg,var(--line) 1px,transparent 1px);
+  background-size:46px 46px; opacity:.05;
+  -webkit-mask-image:radial-gradient(120% 100% at 50% 0,#000 30%,transparent 90%);
+          mask-image:radial-gradient(120% 100% at 50% 0,#000 30%,transparent 90%);
+}
+.fx.vig{box-shadow:inset 0 0 240px 40px #000a, inset 0 0 60px #0006}
+.fx.grain{opacity:.05; mix-blend-mode:overlay;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>")}
+
+.wrap{max-width:1280px; margin:0 auto; padding:22px clamp(14px,3vw,34px) 60px}
+
+/* ── Header ── */
+header{display:flex; align-items:center; gap:18px; padding:6px 2px 18px;
+  border-bottom:1px solid var(--line); animation:rise .7s .02s both}
+.mark{display:flex; align-items:baseline; gap:12px}
+.mark .dot{width:11px;height:11px;border-radius:50%;background:var(--signal);
+  box-shadow:0 0 14px var(--signal); align-self:center; animation:beat 2.6s infinite}
+.mark h1{font-family:"Instrument Serif",serif; font-weight:400; font-size:30px;
+  letter-spacing:.3px; line-height:1}
+.mark h1 i{color:var(--signal); font-style:italic}
+.mark .sub{font-family:"IBM Plex Mono",monospace; font-size:11px; letter-spacing:.32em;
+  text-transform:uppercase; color:var(--muted)}
+.link{margin-left:auto; display:flex; align-items:center; gap:10px;
+  font-family:"IBM Plex Mono",monospace; font-size:12px; letter-spacing:.12em}
+.link .pip{width:8px;height:8px;border-radius:50%;background:var(--warn);
+  box-shadow:0 0 10px var(--warn); transition:.3s}
+.link.on .pip{background:var(--mint); box-shadow:0 0 12px var(--mint)}
+.link b{color:var(--warn); font-weight:500} .link.on b{color:var(--mint)}
+
+/* ── Main grid ── */
+main{display:grid; grid-template-columns:1.55fr 1fr; gap:22px; margin-top:22px}
+@media(max-width:880px){main{grid-template-columns:1fr}}
+
+/* ── Video stage ── */
+.stage{position:relative; animation:rise .7s .12s both}
+.scope{position:relative; border:1px solid var(--line); border-radius:var(--r);
+  background:#0c0a06; overflow:hidden; aspect-ratio:1/1}
+.scope img{display:block; width:100%; height:100%; object-fit:contain; cursor:crosshair;
+  filter:saturate(1.04) contrast(1.02); user-select:none; -webkit-user-drag:none}
+.scope .ph{position:absolute; inset:0; display:grid; place-items:center;
+  font-family:"IBM Plex Mono",monospace; color:var(--muted); font-size:13px; letter-spacing:.2em;
+  background:repeating-linear-gradient(45deg,#0c0a06,#0c0a06 12px,#100d08 12px,#100d08 24px)}
+/* 角框準星 */
+.bracket{position:absolute; width:26px; height:26px; border:2px solid var(--signal); opacity:.85; pointer-events:none}
+.bracket.tl{top:12px;left:12px;border-right:0;border-bottom:0}
+.bracket.tr{top:12px;right:12px;border-left:0;border-bottom:0}
+.bracket.bl{bottom:12px;left:12px;border-right:0;border-top:0}
+.bracket.br{bottom:12px;right:12px;border-left:0;border-top:0}
+.cross{position:absolute; inset:0; pointer-events:none; opacity:.5}
+.cross::before,.cross::after{content:""; position:absolute; background:var(--signal); opacity:.35}
+.cross::before{left:50%; top:calc(50% - 9px); width:1px; height:18px; transform:translateX(-.5px)}
+.cross::after{top:50%; left:calc(50% - 9px); height:1px; width:18px; transform:translateY(-.5px)}
+/* 尺規刻度 */
+.ruler{position:absolute; pointer-events:none; opacity:.5}
+.ruler.top{top:0;left:0;right:0;height:9px;
+  background:repeating-linear-gradient(90deg,var(--line2) 0 1px,transparent 1px 22px)}
+.ruler.left{top:0;bottom:0;left:0;width:9px;
+  background:repeating-linear-gradient(0deg,var(--line2) 0 1px,transparent 1px 22px)}
+.tag{position:absolute; left:14px; bottom:12px; display:flex; gap:8px; flex-wrap:wrap}
+.chip{font-family:"IBM Plex Mono",monospace; font-size:11px; letter-spacing:.1em;
+  padding:4px 9px; border-radius:99px; border:1px solid var(--line);
+  background:#0c0a06cc; color:var(--dim); backdrop-filter:blur(3px)}
+.chip.live{color:var(--mint); border-color:#5fae6a55}
+.chip.warn{color:var(--warn); border-color:#ff5a4855}
+.hint{margin-top:10px; font-family:"IBM Plex Mono",monospace; font-size:11px;
+  letter-spacing:.06em; color:var(--muted); text-align:center}
+
+/* ── Measurement readout ── */
+.readout{border:1px solid var(--line); border-radius:var(--r);
+  background:linear-gradient(180deg,var(--panel),#191409); padding:18px 18px 8px;
+  position:relative; overflow:hidden; animation:rise .7s .2s both}
+.readout::before{content:""; position:absolute; right:-40px; top:-40px; width:160px; height:160px;
+  background:radial-gradient(circle,var(--signal) 0,transparent 70%); opacity:.07}
+.rhead{display:flex; align-items:center; justify-content:space-between; margin-bottom:6px}
+.rhead .k{font-family:"IBM Plex Mono",monospace; font-size:11px; letter-spacing:.28em;
+  text-transform:uppercase; color:var(--muted)}
+.rhead .via{font-family:"IBM Plex Mono",monospace; font-size:11px; color:var(--mint);
+  border:1px solid #5fae6a44; border-radius:99px; padding:3px 9px; opacity:0; transition:.3s}
+.rhead .via.on{opacity:1}
+.grid3{display:grid; grid-template-columns:1fr 1fr 1fr; gap:2px 14px; margin-top:4px}
+.metric{padding:8px 0; border-bottom:1px solid var(--line)}
+.metric .lab{font-family:"IBM Plex Mono",monospace; font-size:10px; letter-spacing:.2em;
+  color:var(--muted); text-transform:uppercase}
+.metric .val{font-family:"Instrument Serif",serif; font-size:42px; line-height:1; color:var(--bone);
+  display:flex; align-items:baseline; gap:5px; transition:color .25s}
+.metric .val.live{color:var(--signal)}
+.metric .val small{font-family:"IBM Plex Mono",monospace; font-size:12px; color:var(--muted);
+  letter-spacing:.05em}
+.metric.wide{grid-column:span 3; border-bottom:0; display:flex; align-items:baseline;
+  justify-content:space-between; padding-top:12px}
+.metric.wide .val{font-size:34px}
+.npts{font-family:"IBM Plex Mono",monospace; font-size:10px; color:var(--muted)}
+
+/* ── Panel (controls) ── */
+.panel{border:1px solid var(--line); border-radius:var(--r); background:var(--panel2);
+  margin-top:18px; padding:16px; animation:rise .7s .28s both; backdrop-filter:blur(2px)}
+.panel h2{font-family:"IBM Plex Mono",monospace; font-size:11px; letter-spacing:.28em;
+  text-transform:uppercase; color:var(--muted); margin-bottom:14px; display:flex; gap:8px; align-items:center;
+  cursor:pointer; user-select:none}
+.panel h2::before{content:""; width:14px; height:1px; background:var(--signal)}
+.panel h2::after{content:"−"; margin-left:auto; color:var(--muted); font-size:13px}
+.panel.closed h2{margin-bottom:0}
+.panel.closed h2::after{content:"+"}
+.panel.closed > *:not(h2){display:none}
+/* 情境模式 */
+.modes{display:flex; gap:8px; margin-bottom:14px; animation:rise .7s .16s both}
+.mode{flex:1; text-align:center; font-family:"Noto Sans TC",sans-serif; font-size:13px;
+  padding:10px 4px; border:1px solid var(--line); border-radius:10px; background:#0c0a0688;
+  color:var(--dim); cursor:pointer; transition:.18s; letter-spacing:.06em}
+.mode:hover{border-color:var(--signal); color:var(--bone)}
+.mode.on{border-color:var(--signal); color:var(--signal); background:#ff7a1a14;
+  box-shadow:inset 0 0 12px #ff7a1a14}
+.tg{display:flex; align-items:center; justify-content:space-between; padding:9px 0;
+  border-bottom:1px dashed var(--line)}
+.tg:last-child{border-bottom:0}
+.tg span{font-size:14px; color:var(--bone); font-weight:300}
+.sw{--w:42px; width:var(--w); height:23px; border-radius:99px; background:#0c0a06;
+  border:1px solid var(--line); position:relative; cursor:pointer; transition:.25s; flex:none}
+.sw::after{content:""; position:absolute; top:2px; left:2px; width:17px; height:17px; border-radius:50%;
+  background:var(--muted); transition:.25s cubic-bezier(.4,1.4,.5,1)}
+.sw.on{background:linear-gradient(90deg,var(--signal-d),var(--signal)); border-color:var(--signal)}
+.sw.on::after{left:21px; background:#140f08; box-shadow:0 0 10px #0008}
+
+.slider{margin:14px 0 4px}
+.slider .row{display:flex; justify-content:space-between; align-items:baseline; margin-bottom:7px}
+.slider .row b{font-family:"Instrument Serif",serif; font-size:22px; color:var(--signal)}
+.slider .row label{font-family:"IBM Plex Mono",monospace; font-size:11px; letter-spacing:.18em;
+  text-transform:uppercase; color:var(--muted)}
+input[type=range]{-webkit-appearance:none; width:100%; height:3px; border-radius:3px;
+  background:var(--line); outline:none}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none; width:15px; height:15px;
+  border-radius:50%; background:var(--signal); cursor:pointer; box-shadow:0 0 0 4px #ff7a1a22}
+input[type=range]::-moz-range-thumb{width:15px;height:15px;border:0;border-radius:50%;
+  background:var(--signal); cursor:pointer}
+
+.btns{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:14px}
+.btn{font-family:"Noto Sans TC",sans-serif; font-size:13px; padding:11px 8px; border-radius:9px;
+  border:1px solid var(--line); background:#0c0a0688; color:var(--dim); cursor:pointer;
+  transition:.18s; letter-spacing:.04em}
+.btn:hover{border-color:var(--signal); color:var(--bone); background:#ff7a1a12; transform:translateY(-1px)}
+.btn:active{transform:translateY(0) scale(.98)}
+.btn.full{grid-column:span 2}
+.btn.hot{border-color:var(--signal-d); color:var(--signal)}
+.tline{font-family:"IBM Plex Mono",monospace; font-size:11px; color:var(--dim);
+  margin-top:12px; min-height:15px; letter-spacing:.03em}
+.tline b{color:var(--mint)}
+/* 定位品檢 */
+.panel.insp{border-color:var(--signal-d)}
+.verdict{display:flex; align-items:baseline; gap:14px; margin:2px 0 10px}
+.verdict .vv{font-family:"Instrument Serif",serif; font-size:56px; line-height:.9}
+.verdict .vs{font-family:"IBM Plex Mono",monospace; font-size:30px; color:var(--muted)}
+.verdict .vs small{font-size:13px}
+.verdict.ok .vv{color:var(--mint)} .verdict.ng .vv{color:var(--warn)}
+.verdict.idle .vv{color:var(--muted); font-size:34px}
+.boxsel{position:absolute; border:2px dashed var(--signal); background:#ff7a1a18;
+  pointer-events:none; display:none; z-index:5}
+
+/* ── footer ticker ── */
+.ticker{margin-top:26px; border:1px solid var(--line); border-radius:99px; padding:10px 18px;
+  display:flex; gap:22px; flex-wrap:wrap; font-family:"IBM Plex Mono",monospace; font-size:12px;
+  color:var(--muted); letter-spacing:.08em; background:var(--ink2); animation:rise .7s .36s both}
+.ticker .it{display:flex; gap:7px; align-items:center}
+.ticker .it i{color:var(--muted); font-style:normal}
+.ticker .it b{color:var(--bone); font-weight:500}
+.ticker .it b.ok{color:var(--mint)} .ticker .it b.no{color:var(--warn)}
+
+/* 機器人雷達競技場 / 3D 點雲(共用外框) */
+.arena-wrap,.pc-wrap{margin-top:22px; border:1px solid var(--line); border-radius:var(--r);
+  background:var(--panel2); padding:14px; animation:rise .7s .34s both}
+.pc-wrap.closed > *:not(.ahead){display:none}
+.pc-wrap.closed .ahead{margin-bottom:0}
+#pc3d{width:100%; height:440px; display:block; border:1px solid var(--line);
+  border-radius:8px; background:#080604; cursor:grab}
+#pc3d:active{cursor:grabbing}
+.ahead{display:flex; align-items:center; gap:14px; margin-bottom:10px}
+.ahead h2{font-family:"IBM Plex Mono",monospace; font-size:11px; letter-spacing:.28em;
+  text-transform:uppercase; color:var(--muted); cursor:pointer; user-select:none}
+.arena-wrap.closed > *:not(.ahead){display:none}
+.arena-wrap.closed .ahead{margin-bottom:0}
+.abadge{font-family:"Instrument Serif",serif; font-size:24px; color:var(--signal); line-height:1}
+.atoggle{margin-left:auto; display:flex; align-items:center; gap:8px; font-size:13px;
+  color:var(--bone); cursor:pointer; user-select:none}
+#arena{width:100%; height:auto; display:block; border:1px solid var(--line); border-radius:8px}
+.ahint{margin-top:8px; font-family:"IBM Plex Mono",monospace; font-size:11px;
+  color:var(--muted); letter-spacing:.04em}
+/* 跌倒警報 */
+.fallmodal{position:fixed; inset:0; z-index:200; display:none; place-items:center;
+  background:#000a; backdrop-filter:blur(3px)}
+.fallmodal.show{display:grid}
+.fbox{background:linear-gradient(180deg,#2a0f0f,#1a0a0a); border:2px solid var(--warn);
+  border-radius:16px; padding:34px 40px; text-align:center; max-width:380px;
+  box-shadow:0 0 60px #ff5a4855; animation:rise .3s both}
+.fbox .ficon{font-size:56px; color:var(--warn); line-height:1}
+.fbox .ftitle{font-family:"Noto Sans TC"; font-size:23px; font-weight:700; color:#fff; margin:8px 0}
+.fbox .fsub{font-family:"IBM Plex Mono",monospace; font-size:12px; color:#e0b0b0; margin-bottom:18px}
+.fbtn{font-family:"Noto Sans TC"; font-size:17px; font-weight:700; padding:13px 34px;
+  border:0; border-radius:10px; background:var(--signal); color:#140f08; cursor:pointer}
+.fbtn:hover{filter:brightness(1.1)}
+
+@keyframes rise{from{opacity:0; transform:translateY(14px)} to{opacity:1; transform:none}}
+@keyframes beat{0%,100%{transform:scale(1);opacity:1} 50%{transform:scale(.7);opacity:.55}}
+
+/* 障礙物提醒視窗：頂部置中、不攔截滑鼠(持續顯示直到障礙物離開仍可操作) */
+.obsmodal{position:fixed; top:24px; left:50%; transform:translateX(-50%); z-index:210;
+  display:none; pointer-events:none}
+.obsmodal.show{display:block; animation:rise .25s both}
+.obox{background:linear-gradient(180deg,#2a0f0f,#1a0a0a); border:2px solid var(--warn);
+  border-radius:14px; padding:16px 28px; text-align:center; min-width:300px;
+  box-shadow:0 0 50px #ff5a4866}
+.obox .oicon{font-size:34px; color:var(--warn); line-height:1; animation:beat 1s infinite}
+.obox .otitle{font-family:"Noto Sans TC"; font-size:19px; font-weight:700; color:#fff; margin:4px 0}
+.obox .osub{font-family:"IBM Plex Mono",monospace; font-size:13px; color:#ffd2cc}
+
+/* ── 操作流暢度 / 細節打磨 ── */
+.val,.vs,.ticker b,.abadge,.slider .row b{font-variant-numeric:tabular-nums}
+::selection{background:#ff7a1a44; color:var(--bone)}
+*{scrollbar-width:thin; scrollbar-color:var(--line) transparent}
+::-webkit-scrollbar{width:9px;height:9px}
+::-webkit-scrollbar-thumb{background:var(--line); border-radius:9px}
+::-webkit-scrollbar-thumb:hover{background:var(--line2)}
+
+.panel > h2{transition:color .2s}
+.panel > h2:hover{color:var(--dim)}
+.panel:not(.closed) > *:not(h2){animation:fadeSlide .28s both}
+@keyframes fadeSlide{from{opacity:0; transform:translateY(-5px)} to{opacity:1; transform:none}}
+
+.btn:focus-visible,.sw:focus-visible,.mode:focus-visible{outline:1.5px solid var(--signal); outline-offset:2px}
+.mode:active{transform:scale(.96)}
+.sw:hover{border-color:var(--line2)}
+
+/* 滑桿：軌道填色 + 滑塊回饋 */
+input[type=range]{background:linear-gradient(90deg,var(--signal-d) calc(var(--p,50)*1%),var(--line) 0)}
+input[type=range]::-webkit-slider-thumb{transition:box-shadow .2s, transform .15s}
+input[type=range]::-webkit-slider-thumb:hover{transform:scale(1.2); box-shadow:0 0 0 7px #ff7a1a2a}
+
+/* 點擊定位 ping 回饋 */
+.ping{position:absolute; width:34px; height:34px; margin:-17px 0 0 -17px; border:2px solid var(--signal);
+  border-radius:50%; pointer-events:none; z-index:6; animation:ping .55s cubic-bezier(.2,.8,.3,1) forwards}
+@keyframes ping{from{transform:scale(.25); opacity:1} to{transform:scale(1.25); opacity:0}}
+
+/* 游標十字準星(量測/品檢模式) */
+.xh{position:absolute; background:#ff7a1a55; pointer-events:none; z-index:4; display:none}
+.xh.h{height:1px; left:0; right:0}
+.xh.v{width:1px; top:0; bottom:0}
+.xhchip{position:absolute; font-family:"IBM Plex Mono",monospace; font-size:10px; color:var(--signal);
+  background:#0c0a06d9; border:1px solid #ff7a1a44; padding:2px 6px; border-radius:5px;
+  pointer-events:none; z-index:6; display:none; letter-spacing:.05em; white-space:nowrap}
+
+/* 品檢分數量表(含門檻刻度) */
+.meter{position:relative; height:10px; border-radius:99px; background:#0c0a06; border:1px solid var(--line);
+  margin:4px 0 12px}
+.meter .fill{position:absolute; inset:1px auto 1px 1px; width:0%; border-radius:99px;
+  background:linear-gradient(90deg,var(--warn),var(--signal) 55%,var(--mint));
+  transition:width .35s cubic-bezier(.3,1,.4,1)}
+.meter .thr{position:absolute; top:-4px; bottom:-4px; width:2px; background:var(--bone);
+  border-radius:2px; transition:left .2s; box-shadow:0 0 6px #000}
+.verdict .vv{transition:color .3s}
+.verdict.ng .vv{animation:ngflash .9s ease-out}
+@keyframes ngflash{0%{text-shadow:0 0 26px var(--warn)} 100%{text-shadow:none}}
+
+/* 浮動通知 */
+#toasts{position:fixed; right:18px; bottom:18px; z-index:300; display:flex; flex-direction:column; gap:8px}
+.toast{font-family:"Noto Sans TC",sans-serif; font-size:13px; color:var(--bone); letter-spacing:.03em;
+  background:#1d1810f2; border:1px solid var(--signal-d); border-left:3px solid var(--signal);
+  padding:11px 16px; border-radius:10px; box-shadow:0 8px 30px #000a; max-width:340px;
+  animation:toastIn .35s cubic-bezier(.2,1,.3,1) both}
+.toast.bye{animation:toastOut .3s forwards}
+@keyframes toastIn{from{opacity:0; transform:translateX(24px)} to{opacity:1; transform:none}}
+@keyframes toastOut{to{opacity:0; transform:translateX(24px)}}
+
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms !important; transition-duration:.01ms !important}
+}
+
+/* ════════ 亮色主題「瓷白精密儀器」— 整頁翻亮，螢幕區保留深色顯示屏 ════════ */
+:root{
+  --ink:#f2eee3;          /* 頁面底：暖瓷白 */
+  --ink2:#fffdf6;
+  --panel:#fffdf6;        /* 卡片：紙白 */
+  --panel2:#fbf7eb;
+  --line:#ded5bd; --line2:#c8bb9d;
+  --bone:#231d10;         /* 主文字：墨色 */
+  --dim:#5d5440; --muted:#95896c;
+  --signal:#e8590c; --signal-d:#c2470a;   /* 國際橘 */
+  --mint:#157a4a; --mint-d:#0f5e39;        /* 亮底用深綠 */
+  --warn:#cf3527;
+}
+body{
+  color:var(--bone);
+  background:
+    radial-gradient(90% 55% at 50% -8%, #fffef9 0%, transparent 60%),
+    radial-gradient(70% 50% at 105% 108%, #f3e3c4 0%, transparent 55%),
+    radial-gradient(60% 45% at -8% 100%, #eef0e2 0%, transparent 50%),
+    var(--ink);
+}
+body::before{content:""; position:fixed; top:0; left:0; right:0; height:4px; z-index:120;
+  background:linear-gradient(90deg,var(--signal-d),var(--signal) 40%,#ffb37a); pointer-events:none}
+.fx.grid{opacity:.045;
+  background-image:linear-gradient(#5d5440 1px,transparent 1px),
+                   linear-gradient(90deg,#5d5440 1px,transparent 1px)}
+.fx.vig{box-shadow:none}
+.fx.grain{opacity:.03; mix-blend-mode:multiply}
+::selection{background:#e8590c33; color:var(--bone)}
+
+header{border-bottom:2px solid #2c2517; padding-top:14px}
+.mark h1{letter-spacing:0}
+
+/* 螢幕區 = 深色顯示屏(儀器窗) */
+.scope{background:#15120c; border:1px solid #2c2517;
+  box-shadow:0 14px 38px rgba(60,42,12,.22), 0 2px 6px rgba(60,42,12,.14)}
+.chip{background:#15120cd6; color:#cdc5b0; border-color:#ffffff24}
+.chip.live{color:#7ce4a9; border-color:#7ce4a955}
+.chip.warn{color:#ff9183; border-color:#ff918355}
+.xhchip{background:#15120ce6}
+.boxsel{background:#e8590c1f}
+.ph{color:#8d8470}
+
+/* 卡片：紙白 + 柔和層影 */
+.readout{background:linear-gradient(180deg,#fffdf6,#f8f2e2);
+  box-shadow:0 1px 2px rgba(60,46,16,.06), 0 12px 30px rgba(60,46,16,.08)}
+.readout::before{opacity:.12}
+.panel,.arena-wrap,.pc-wrap{background:var(--panel2);
+  box-shadow:0 1px 2px rgba(60,46,16,.05), 0 10px 26px rgba(60,46,16,.06)}
+.rhead .via{border-color:#157a4a44}
+
+/* 控制元件 */
+.btn{background:#fff; color:var(--dim); box-shadow:0 1px 2px rgba(60,46,16,.08)}
+.btn:hover{background:#e8590c10; color:var(--bone)}
+.sw{background:#ece4cf}
+.sw::after{background:#b3a787}
+.sw.on::after{background:#fff; box-shadow:0 1px 4px rgba(120,50,0,.4)}
+.mode{background:#fff; box-shadow:0 1px 2px rgba(60,46,16,.07)}
+.mode.on{background:var(--signal); color:#fff; border-color:var(--signal);
+  box-shadow:0 5px 16px #e8590c4d}
+.meter{background:#ece4cf}
+.meter .thr{background:var(--bone); box-shadow:0 0 4px #fff}
+.tg{border-bottom-color:#e7dfc9}
+
+/* 底部資訊列 / 通知 / 警報 */
+.ticker{background:#fffdf6; box-shadow:0 1px 2px rgba(60,46,16,.06), 0 8px 22px rgba(60,46,16,.06)}
+.toast{background:#fffdf6; color:var(--bone); border-color:#e8590c44;
+  border-left-color:var(--signal); box-shadow:0 12px 36px rgba(60,42,12,.25)}
+.fallmodal{background:rgba(58,34,16,.40)}
+.fbox{background:#fff6f2; border-color:var(--warn); box-shadow:0 0 70px #cf352766}
+.fbox .ftitle{color:#46150e}
+.fbox .fsub{color:#9a5e52}
+.fbtn{background:var(--signal); color:#fff}
+
+/* 深色顯示屏的邊框統一 */
+#arena,#pc3d{border-color:#2c2517;
+  box-shadow:0 10px 26px rgba(60,42,12,.18), 0 2px 5px rgba(60,42,12,.12)}
+.verdict.idle .vv{color:var(--muted)}
+
+/* ── 公司品牌 ── */
+.brand{display:flex; align-items:center; margin-right:6px; padding-right:18px;
+  border-right:1px solid var(--line); transition:opacity .2s, transform .2s}
+.brand .ctlogo{height:44px; aspect-ratio:2.5; display:block}
+.brand:hover{opacity:.8; transform:translateY(-1px)}
+.credit{margin-top:26px; display:flex; justify-content:center; align-items:center;
+  gap:12px; padding:16px 0 4px; border-top:1px solid var(--line);
+  animation:rise .7s .42s both}
+.credit .ctlogo{height:28px; aspect-ratio:2.5; opacity:.92}
+.credit span{font-family:"IBM Plex Mono",monospace; font-size:10.5px;
+  letter-spacing:.24em; color:var(--muted)}
+.credit b{color:#171c61; font-weight:600}
+@media(max-width:680px){.brand .ctlogo{height:32px}}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="ctlogo" viewBox="0 0 92.604164 37.041667"><defs
+     id="defs1"><linearGradient
+   id="swatch14"
+   inkscape:swatch="solid"><stop
+     style="stop-color:#ffe01a;stop-opacity:1;"
+     offset="0"
+     id="stop14" /></linearGradient>
+	
+
+		
+		
+		
+		
+		
+		
+		
+		
+	<filter
+   inkscape:collect="always"
+   style="color-interpolation-filters:sRGB"
+   id="filter34"
+   x="-0.0040145025"
+   y="-0.017010504"
+   width="1.008029"
+   height="1.034021"><feGaussianBlur
+     inkscape:collect="always"
+     stdDeviation="0.05625869"
+     id="feGaussianBlur34" /></filter><filter
+   inkscape:collect="always"
+   style="color-interpolation-filters:sRGB"
+   id="filter35"
+   x="-0.0033973506"
+   y="-0.017010501"
+   width="1.0067947"
+   height="1.034021"><feGaussianBlur
+     inkscape:collect="always"
+     stdDeviation="0.05625869"
+     id="feGaussianBlur35" /></filter><filter
+   inkscape:collect="always"
+   style="color-interpolation-filters:sRGB"
+   id="filter36"
+   x="-0.0063789379"
+   y="-0.0063789382"
+   width="1.0127579"
+   height="1.0127579"><feGaussianBlur
+     inkscape:collect="always"
+     stdDeviation="0.05625869"
+     id="feGaussianBlur36" /></filter></defs><g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1"><path
+       fill="#dddddd"
+       d="m 31.75,18.520833 c 0,5.845047 -4.738331,10.583333 -10.583114,10.583333 -5.845222,0 -10.583553,-4.738286 -10.583553,-10.583333 0,-5.845046 4.738331,-10.583333 10.583509,-10.583333 5.844827,0 10.583158,4.738287 10.583158,10.583333 z"
+       id="path35"
+       style="fill:#171c61;fill-opacity:1;stroke-width:0.0439243;filter:url(#filter36)" /><text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:7.9375px;font-family:'Noto Sans';-inkscape-font-specification:'Noto Sans, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;text-align:start;writing-mode:lr-tb;direction:ltr;text-anchor:start;display:inline;mix-blend-mode:normal;fill:#171c61;fill-opacity:1;stroke-width:11.4875;filter:url(#filter35)"
+       x="39.203407"
+       y="15.292903"
+       id="text35"><tspan
+         sodipodi:role="line"
+         id="tspan35"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:7.9375px;font-family:'Noto Sans';-inkscape-font-specification:'Noto Sans, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;fill:#171c61;fill-opacity:1;stroke-width:11.4875"
+         x="39.203407"
+         y="15.292903">Ching Tech</tspan></text><text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:8.59967px;font-family:'Noto Sans TC';-inkscape-font-specification:'Noto Sans TC, @wght=400';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;font-variation-settings:'wght' 400;text-align:start;writing-mode:lr-tb;direction:ltr;text-anchor:start;display:inline;mix-blend-mode:normal;fill:#171c61;fill-opacity:1;stroke-width:12.4458;filter:url(#filter34)"
+       x="43.406952"
+       y="27.093359"
+       id="text34"><tspan
+         sodipodi:role="line"
+         id="tspan34"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:8.59967px;font-family:'Noto Sans TC';-inkscape-font-specification:'Noto Sans TC, @wght=400';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;font-variation-settings:'wght' 400;fill:#171c61;fill-opacity:1;stroke-width:12.4458"
+         x="43.406952"
+         y="27.093359">擎添工業</tspan></text><path
+       fill="#dddddd"
+       d="m 31.75,18.520833 c 0,5.845047 -4.738331,10.583333 -10.583114,10.583333 -5.845222,0 -10.583553,-4.738286 -10.583553,-10.583333 0,-5.845046 4.738331,-10.583333 10.583509,-10.583333 5.844827,0 10.583158,4.738287 10.583158,10.583333 z"
+       id="path1-0"
+       style="stroke-width:0.0439243" /><path
+       fill="#7ebee3"
+       d="m 21.166491,18.520833 -10.583114,-3.95e-4 c 0,5.845442 4.738331,10.583728 10.583509,10.583728 z"
+       id="path2-3"
+       style="stroke-width:0.0439243" /><path
+       fill="#7ebee3"
+       d="M 21.166842,18.520833 H 31.749956 C 31.749956,12.675787 27.011625,7.9375 21.166447,7.9375 Z"
+       id="path3-0"
+       style="stroke-width:0.0439243" /><path
+       fill="#dddddd"
+       d="m 27.851018,18.520833 c 0,3.692055 -2.992868,6.684088 -6.684571,6.684088 -3.691308,0 -6.684176,-2.992033 -6.684176,-6.684088 0,-3.691659 2.992868,-6.684088 6.684176,-6.684088 3.691703,0 6.684571,2.992429 6.684571,6.684088 z"
+       id="path4-4"
+       style="stroke-width:0.0439243" /><path
+       fill="#1d96d5"
+       d="m 21.166842,18.520833 -3.95e-4,-6.684088 c -3.691308,0 -6.684176,2.992429 -6.684176,6.684088 z"
+       id="path5-4"
+       style="stroke-width:0.0439243" /><path
+       fill="#1d96d5"
+       d="m 21.166491,18.520833 3.95e-4,6.684088 c 3.691747,0 6.684176,-2.992033 6.684176,-6.684088 z"
+       id="path6-4"
+       style="stroke-width:0.0439243"
+       inkscape:label="path6-4" /><path
+       fill="#1c2a54"
+       d="m 18.08841,20.97172 v -4.901773 c 0.923024,0 1.72596,0.510444 2.143899,1.264184 l 0.438321,-0.242945 c -0.503548,-0.907651 -1.470673,-1.522459 -2.582176,-1.522459 -1.630337,0 -2.952151,1.321769 -2.952151,2.952106 0,1.630337 1.321814,2.952106 2.952151,2.952106 1.111503,0 2.078628,-0.614808 2.582176,-1.522459 L 20.232309,19.707535 C 19.81437,20.461276 19.011434,20.97172 18.08841,20.97172 Z"
+       id="path7-4"
+       style="fill:#171c61;fill-opacity:1;stroke-width:0.0439243" /><polygon
+       fill="#1c2a54"
+       points="388.232,188.791 260.731,188.791 260.731,200.15 297.08,200.15 297.08,323.209 351.324,323.209 351.324,200.15 388.232,200.15 "
+       id="polygon7"
+       transform="matrix(0.04392427,0,0,0.04392427,9.9220534,7.2762201)"
+       style="fill:#171c61;fill-opacity:1" /><text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:7.9375px;font-family:'Noto Sans';-inkscape-font-specification:'Noto Sans, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;text-align:start;writing-mode:lr-tb;direction:ltr;text-anchor:start;fill:#171c61;fill-opacity:1;stroke-width:11.4875"
+       x="39.20332"
+       y="15.292903"
+       id="text1"
+       inkscape:label="Ching Tech"><tspan
+         sodipodi:role="line"
+         id="tspan1"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:7.9375px;font-family:'Noto Sans';-inkscape-font-specification:'Noto Sans, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;fill:#171c61;fill-opacity:1;stroke-width:11.4875"
+         x="39.20332"
+         y="15.292903">Ching Tech</tspan></text><text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:8.59967px;font-family:'Noto Sans TC';-inkscape-font-specification:'Noto Sans TC, @wght=400';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;font-variation-settings:'wght' 400;text-align:start;writing-mode:lr-tb;direction:ltr;text-anchor:start;fill:#171c61;fill-opacity:1;stroke-width:12.4458"
+       x="43.406864"
+       y="27.093275"
+       id="text12"
+       inkscape:label="擎添工業"><tspan
+         sodipodi:role="line"
+         id="tspan12"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:8.59967px;font-family:'Noto Sans TC';-inkscape-font-specification:'Noto Sans TC, @wght=400';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;font-variation-settings:'wght' 400;fill:#171c61;fill-opacity:1;stroke-width:12.4458"
+         x="43.406864"
+         y="27.093275">擎添工業</tspan></text></g><g
+     inkscape:groupmode="layer"
+     id="layer2"
+     inkscape:label="Layer 2" /></symbol></svg>
+<div class="fx grid"></div><div class="fx grain"></div><div class="fx vig"></div>
+
+<div class="wrap">
+  <header>
+    <a class="brand" href="https://www.ching-tech.com" target="_blank" rel="noopener">
+      <svg class="ctlogo" role="img" aria-label="Ching Tech"><use href="#ctlogo"/></svg>
+    </a>
+    <div class="mark">
+      <span class="dot"></span>
+      <h1>D435i <i>Optical</i></h1>
+      <span class="sub">depth · measure console</span>
+    </div>
+    <div class="link" id="link"><span class="pip"></span><b id="linkTxt">AWAITING</b></div>
+  </header>
+
+  <main>
+    <!-- 影像 -->
+    <section class="stage">
+      <div class="scope">
+        <img id="feed" alt="feed" />
+        <div class="ph" id="ph">○ 等待後端影像 · 請啟動 vision_server.py</div>
+        <div class="ruler top"></div><div class="ruler left"></div>
+        <div class="bracket tl"></div><div class="bracket tr"></div>
+        <div class="bracket bl"></div><div class="bracket br"></div>
+        <div class="cross"></div>
+        <div class="boxsel" id="boxsel"></div>
+        <div class="xh h" id="xhH"></div><div class="xh v" id="xhV"></div>
+        <div class="xhchip" id="xhChip"></div>
+        <div class="tag" id="tag"></div>
+      </div>
+      <div class="hint" id="scopeHint">點擊畫面 → 選取要量測的物體　·　MJPEG 即時串流</div>
+    </section>
+
+    <!-- 右側 -->
+    <aside>
+      <div class="modes" id="modes">
+        <div class="mode" data-mode="measure">📐 量測</div>
+        <div class="mode" data-mode="inspect">📦 品檢</div>
+        <div class="mode" data-mode="obstacle">🚧 障礙</div>
+        <div class="mode" data-mode="watch">👁 監看</div>
+        <div class="mode" data-mode="idle">○ 待機</div>
+      </div>
+      <div class="readout">
+        <div class="rhead"><span class="k">Measurement</span><span class="via" id="via"></span></div>
+        <div class="grid3">
+          <div class="metric"><div class="lab">長 Length</div><div class="val" id="m_l">—<small>cm</small></div></div>
+          <div class="metric"><div class="lab">寬 Width</div><div class="val" id="m_w">—<small>cm</small></div></div>
+          <div class="metric"><div class="lab">高 Height</div><div class="val" id="m_h">—<small>cm</small></div></div>
+          <div class="metric"><div class="lab">水平傾斜 Tilt</div><div class="val" id="m_t">—<small>°</small></div></div>
+          <div class="metric" style="grid-column:span 2"><div class="lab">距離 Distance</div><div class="val" id="m_d">—<small>m</small></div></div>
+          <div class="metric wide"><span class="npts" id="m_n">　</span></div>
+        </div>
+      </div>
+
+      <div class="panel insp" id="insp" style="display:none">
+        <h2>定位品檢</h2>
+        <div class="verdict idle" id="verdict">
+          <span class="vv" id="vv">待設定</span>
+          <span class="vs" id="vs"><span id="vsNum">--</span><small> / 100</small></span>
+        </div>
+        <div class="meter">
+          <div class="fill" id="meterFill"></div>
+          <div class="thr" id="meterThr" style="left:60%"></div>
+        </div>
+        <div class="slider">
+          <div class="row"><label>NG 門檻</label><b id="thrV">60</b></div>
+          <input type="range" id="thr" min="0" max="100" step="1" value="60" />
+        </div>
+        <div class="tline" id="vdetail">在畫面上拖曳，框住物體四邊作為參考</div>
+        <button class="btn full" data-act="/inspect/clear">✖ 清除參考框</button>
+      </div>
+
+      <div class="panel insp" id="obs" style="display:none">
+        <h2>障礙物檢測</h2>
+        <div class="verdict idle" id="obs_stat">
+          <span class="vv">待設定</span>
+        </div>
+        <div class="slider">
+          <div class="row"><label>觸發距離</label><b id="odistV">1.0 m</b></div>
+          <input type="range" id="odist" min="0.3" max="4.0" step="0.1" value="1.0" />
+        </div>
+        <div class="tline">在畫面上拖曳 → 框出要檢測的範圍（不框＝整個畫面）。範圍內最近物體 ≤ 觸發距離時跳出提醒。</div>
+        <button class="btn full" data-act="/obstacle/clear">✖ 清除檢測範圍</button>
+      </div>
+
+      <div class="panel">
+        <h2>感測 / 量測</h2>
+        <div id="toggles"></div>
+      </div>
+
+      <div class="panel closed">
+        <h2>顯示</h2>
+        <div class="slider">
+          <div class="row"><label>放大倍率</label><b id="zoomV">1.00×</b></div>
+          <input type="range" id="zoom" min="0.5" max="2.5" step="0.05" value="1" />
+        </div>
+        <div class="slider">
+          <div class="row"><label>畫布 px</label><b id="dispV">800</b></div>
+          <input type="range" id="disp" min="480" max="1100" step="20" value="800" />
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>教學 / 辨識</h2>
+        <div class="tline" id="tinfo">樣板：尚未教學</div>
+        <div class="btns">
+          <button class="btn hot" data-act="/action/teach">🎯 新增視角</button>
+          <button class="btn" data-act="/action/clear_template">🗑 清除樣板</button>
+          <button class="btn" data-act="/action/clear_pick">✖ 清除選取</button>
+          <button class="btn" data-act="/scan">📸 擷取點雲</button>
+        </div>
+        <div class="tline" id="msg"></div>
+      </div>
+    </aside>
+  </main>
+
+  <section class="pc-wrap closed" id="pcWrap">
+    <div class="ahead">
+      <h2 id="pcH2">▶ 即時 3D 點雲（點此展開）</h2>
+      <span class="abadge" id="pcBadge"></span>
+    </div>
+    <canvas id="pc3d"></canvas>
+    <div class="ahint">左鍵拖曳旋轉 · 滾輪縮放 · 右鍵平移　·　展開時才向後端取點雲</div>
+  </section>
+
+  <section class="arena-wrap closed" id="arenaWrap">
+    <div class="ahead">
+      <h2 id="arenaH2">▶ 模擬機器人 · 雷達（點此展開）</h2>
+      <span class="abadge" id="abadge">停止</span>
+      <label class="atoggle"><div class="sw" id="avoidSw"></div> 障礙物避障</label>
+    </div>
+    <canvas id="arena" width="900" height="320"></canvas>
+    <div class="ahint">手勢 1前進 4後退 2左轉 3右轉(維持前進/後退) 5歸位 0停　·　鍵盤 ↑↓←→ 空白停 R歸位</div>
+  </section>
+
+  <div class="ticker">
+    <div class="it"><i>PERSON</i><b id="t_p" class="no">—</b></div>
+    <div class="it"><i>DIST</i><b id="t_d">—</b></div>
+    <div class="it"><i>GESTURE</i><b id="t_g">—</b></div>
+    <div class="it"><i>POSE</i><b id="t_f">—</b></div>
+    <div class="it"><i>ROLL</i><b id="t_r">—</b></div>
+    <div class="it"><i>DETECT</i><b id="t_m">—</b></div>
+  </div>
+
+  <footer class="credit">
+    <svg class="ctlogo" role="img" aria-label="Ching Tech"><use href="#ctlogo"/></svg>
+    <span>SYSTEM DESIGNED &amp; BUILT BY <b>CHING TECH</b></span>
+  </footer>
+</div>
+
+<div id="toasts"></div>
+
+<div class="fallmodal" id="fall">
+  <div class="fbox">
+    <div class="ficon">⚠</div>
+    <div class="ftitle">偵測到有人跌倒 / 躺下！</div>
+    <div class="fsub" id="fsub"></div>
+    <button class="fbtn" id="fack">✓ 我知道了</button>
+  </div>
+</div>
+
+<div class="obsmodal" id="obs_modal">
+  <div class="obox">
+    <div class="oicon">⚠</div>
+    <div class="otitle">偵測到障礙物！</div>
+    <div class="osub" id="obs_sub"></div>
+  </div>
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+// 本地設定狀態（與後端預設一致）
+const cfg = {pose:false,hands:false,depth:false,dfilter:true,flip:true,
+             measure:false,level:true,detect:false,inspect:false,
+             obstacle:false,obstacle_dist:1.0,
+             pcloud:false,zoom:1.0,disp:800,inspect_thr:60};
+const TOGGLES = [
+  ["measure","物體量測"],["detect","自動辨識"],["inspect","定位品檢"],["obstacle","障礙偵測"],
+  ["pose","偵測人"],["hands","偵測手勢"],["depth","深度圖"],["dfilter","深度濾鏡"],
+  ["flip","鏡像"],["level","IMU 自動水平"],
+];
+
+async function post(path, body){
+  try{ await fetch(path,{method:"POST",headers:{"Content-Type":"application/json"},
+       body:JSON.stringify(body||{})}); }catch(e){}
+}
+function pushCfg(){ post("/config", cfg); }
+
+// 建立開關
+const tg = $("#toggles");
+for(const [k,label] of TOGGLES){
+  const row = document.createElement("div"); row.className="tg";
+  row.innerHTML = `<span>${label}</span><div class="sw ${cfg[k]?'on':''}" data-k="${k}"></div>`;
+  tg.appendChild(row);
+}
+tg.addEventListener("click", e=>{
+  const sw = e.target.closest(".sw"); if(!sw) return;
+  const k = sw.dataset.k; cfg[k] = !cfg[k]; sw.classList.toggle("on", cfg[k]); pushCfg();
+  if(k==="inspect") syncInsp();
+  if(k==="obstacle") syncObs();
+  syncModeChips();
+});
+function syncHint(){
+  $("#scopeHint").textContent =
+      cfg.obstacle ? "拖曳畫面 → 框出要檢測的範圍（不框＝整個畫面）"
+    : cfg.inspect  ? "拖曳畫面 → 畫出參考框（框住物體四邊）"
+    : "點擊畫面 → 選取要量測的物體　·　MJPEG 即時串流";
+}
+function syncInsp(){
+  $("#insp").style.display = cfg.inspect ? "block" : "none";
+  syncHint();
+}
+function syncObs(){
+  $("#obs").style.display = cfg.obstacle ? "block" : "none";
+  syncHint();
+}
+function syncSwitches(){
+  document.querySelectorAll(".sw[data-k]").forEach(sw=>
+    sw.classList.toggle("on", !!cfg[sw.dataset.k]));
+}
+
+// ── 面板收合 ──
+document.querySelectorAll(".panel > h2").forEach(h=>
+  h.addEventListener("click", ()=>h.parentElement.classList.toggle("closed")));
+
+// ── 情境模式（一鍵切換常用組合）──
+const PRESETS = {
+  measure: {measure:true , inspect:false, obstacle:false, pose:false, hands:false},
+  inspect: {measure:false, inspect:true , obstacle:false, pose:false, hands:false},
+  obstacle:{measure:false, inspect:false, obstacle:true , pose:false, hands:false},
+  watch:   {measure:false, inspect:false, obstacle:false, pose:true , hands:true },
+  idle:    {measure:false, inspect:false, obstacle:false, pose:false, hands:false},
+};
+$("#modes").addEventListener("click", e=>{
+  const m=e.target.closest(".mode"); if(!m) return;
+  Object.assign(cfg, PRESETS[m.dataset.mode]);
+  document.querySelectorAll(".mode").forEach(x=>x.classList.toggle("on",x===m));
+  syncSwitches(); syncInsp(); syncObs(); pushCfg();
+});
+function syncModeChips(){           // 手動開關後反推目前是哪個模式
+  const cur=Object.entries(PRESETS).find(([,p])=>
+    Object.entries(p).every(([k,v])=>cfg[k]===v));
+  document.querySelectorAll(".mode").forEach(x=>
+    x.classList.toggle("on", !!cur && x.dataset.mode===cur[0]));
+}
+
+// 滑桿
+const zoom=$("#zoom"), disp=$("#disp");
+let cfgT=null; const debounced=()=>{clearTimeout(cfgT); cfgT=setTimeout(pushCfg,120);};
+const setFill=el=>{const mn=+el.min,mx=+el.max;
+  el.style.setProperty("--p",(el.value-mn)/(mx-mn)*100);};
+zoom.addEventListener("input",()=>{cfg.zoom=parseFloat(zoom.value);$("#zoomV").textContent=cfg.zoom.toFixed(2)+"×";setFill(zoom);debounced();});
+disp.addEventListener("input",()=>{cfg.disp=parseInt(disp.value);$("#dispV").textContent=cfg.disp;setFill(disp);debounced();});
+const thr=$("#thr");
+thr.addEventListener("input",()=>{cfg.inspect_thr=parseInt(thr.value);$("#thrV").textContent=cfg.inspect_thr;
+  setFill(thr); $("#meterThr").style.left=cfg.inspect_thr+"%"; debounced();});
+const odist=$("#odist");
+odist.addEventListener("input",()=>{cfg.obstacle_dist=parseFloat(odist.value);
+  $("#odistV").textContent=cfg.obstacle_dist.toFixed(1)+" m"; setFill(odist); debounced();});
+[zoom,disp,thr,odist].forEach(setFill);
+
+// 浮動通知
+let lastMsg="";
+function toast(text){
+  const t=document.createElement("div"); t.className="toast"; t.textContent=text;
+  $("#toasts").appendChild(t);
+  setTimeout(()=>{t.classList.add("bye"); setTimeout(()=>t.remove(),320);},3400);
+}
+
+// 動作按鈕
+document.querySelectorAll(".btn[data-act]").forEach(b=>{
+  b.addEventListener("click",()=>{ post(b.dataset.act); b.animate(
+    [{filter:"brightness(1.8)"},{filter:"brightness(1)"}],{duration:320}); });
+});
+
+// object-fit:contain → 螢幕座標換算成影像自然像素
+const feed=$("#feed"), ph=$("#ph"), boxsel=$("#boxsel");
+function toNat(clientX, clientY){
+  const r=feed.getBoundingClientRect();
+  const ar=feed.naturalWidth/feed.naturalHeight, rr=r.width/r.height;
+  let dw=r.width, dh=r.height, ox=0, oy=0;
+  if(ar>rr){ dh=r.width/ar; oy=(r.height-dh)/2; } else { dw=r.height*ar; ox=(r.width-dw)/2; }
+  const x=(clientX-r.left-ox)/dw, y=(clientY-r.top-oy)/dh;
+  if(x<0||x>1||y<0||y>1) return null;
+  return [Math.round(x*feed.naturalWidth), Math.round(y*feed.naturalHeight)];
+}
+
+// 點擊定位 ping(視覺回饋)
+const scopeBox=document.querySelector(".scope");
+function ping(cx,cy){
+  const r=scopeBox.getBoundingClientRect();
+  const d=document.createElement("div"); d.className="ping";
+  d.style.left=(cx-r.left)+"px"; d.style.top=(cy-r.top)+"px";
+  scopeBox.appendChild(d); setTimeout(()=>d.remove(),600);
+}
+
+// 量測模式：點選物體
+feed.addEventListener("click", e=>{
+  if(cfg.inspect || cfg.obstacle || !feed.naturalWidth) return;
+  const p=toNat(e.clientX, e.clientY); if(!p) return;
+  if(!cfg.measure){ cfg.measure=true; document.querySelector('.sw[data-k=measure]').classList.add('on'); pushCfg(); }
+  post("/action/pick",{u:p[0], v:p[1]});
+  ping(e.clientX, e.clientY);
+});
+
+// 游標十字準星(量測/品檢時跟隨,顯示影像像素座標)
+const xhH=$("#xhH"), xhV=$("#xhV"), xhChip=$("#xhChip");
+scopeBox.addEventListener("pointermove", e=>{
+  if(!(cfg.measure||cfg.inspect||cfg.obstacle) || !feed.naturalWidth){
+    xhH.style.display=xhV.style.display=xhChip.style.display="none"; return;
+  }
+  const r=scopeBox.getBoundingClientRect();
+  const x=e.clientX-r.left, y=e.clientY-r.top;
+  xhH.style.display=xhV.style.display="block";
+  xhH.style.top=y+"px"; xhV.style.left=x+"px";
+  const p=toNat(e.clientX,e.clientY);
+  if(p){ xhChip.style.display="block";
+    xhChip.style.left=(x+12)+"px"; xhChip.style.top=(y+12)+"px";
+    xhChip.textContent=p[0]+" , "+p[1]; }
+  else xhChip.style.display="none";
+});
+scopeBox.addEventListener("pointerleave", ()=>{
+  xhH.style.display=xhV.style.display=xhChip.style.display="none";
+});
+
+// 品檢模式：拖曳畫參考框
+const scopeEl=document.querySelector(".scope");
+let drag=null;
+feed.addEventListener("pointerdown", e=>{
+  if(!(cfg.inspect||cfg.obstacle) || !feed.naturalWidth) return;
+  drag={sx:e.clientX, sy:e.clientY}; boxsel.style.display="block";
+  feed.setPointerCapture(e.pointerId); e.preventDefault();
+});
+feed.addEventListener("pointermove", e=>{
+  if(!drag) return;
+  const sr=scopeEl.getBoundingClientRect();
+  const x0=Math.min(drag.sx,e.clientX), y0=Math.min(drag.sy,e.clientY);
+  const x1=Math.max(drag.sx,e.clientX), y1=Math.max(drag.sy,e.clientY);
+  boxsel.style.left=(x0-sr.left)+"px"; boxsel.style.top=(y0-sr.top)+"px";
+  boxsel.style.width=(x1-x0)+"px"; boxsel.style.height=(y1-y0)+"px";
+});
+feed.addEventListener("pointerup", e=>{
+  if(!drag) return; const d=drag; drag=null; boxsel.style.display="none";
+  if(Math.abs(e.clientX-d.sx)<8 && Math.abs(e.clientY-d.sy)<8) return;  // 太小
+  const a=toNat(Math.min(d.sx,e.clientX), Math.min(d.sy,e.clientY));
+  const b=toNat(Math.max(d.sx,e.clientX), Math.max(d.sy,e.clientY));
+  if(!a||!b) return;
+  if(cfg.obstacle){
+    post("/obstacle/box",{x0:a[0], y0:a[1], x1:b[0], y1:b[1]});
+    ping(e.clientX, e.clientY);
+    toast("✓ 已設定檢測範圍");
+  }else{
+    post("/inspect/box",{x0:a[0], y0:a[1], x1:b[0], y1:b[1]});
+    ping(e.clientX, e.clientY);
+    toast("✓ 參考框已設定，正在擷取參考特徵…");
+  }
+});
+
+// 串流（連上才設 src，避免一直紅 X）
+function startStream(){ if(!feed.src){ feed.src="/stream?"+Date.now(); } }
+feed.addEventListener("load",()=>{ ph.style.display="none"; });
+feed.addEventListener("error",()=>{ ph.style.display="grid"; feed.removeAttribute("src"); setTimeout(startStream,1500); });
+
+// 輪詢狀態
+const link=$("#link"), via=$("#via");
+const setVal=(id,v,unit,live)=>{ const el=$(id);
+  el.innerHTML = (v==null?"—":v)+`<small>${unit}</small>`; el.classList.toggle("live",!!live); };
+async function poll(){
+  try{
+    const s = await (await fetch("/status",{cache:"no-store"})).json();
+    link.classList.add("on"); $("#linkTxt").textContent="LINK ONLINE"; startStream();
+    lastStatus = s; fallCheck(s); obstacleCheck(s);
+    const m=s.measure;
+    if(m){
+      setVal("#m_l",(m.length*100).toFixed(1),"cm",true);
+      setVal("#m_w",(m.width*100).toFixed(1),"cm",true);
+      setVal("#m_h",m.height>0?(m.height*100).toFixed(1):"—","cm",m.height>0);
+      setVal("#m_t",(m.tilt>=0?"+":"")+m.tilt.toFixed(0),"°",true);
+      setVal("#m_d",m.dist.toFixed(2),"m",true);
+      $("#m_n").textContent = m.n_pts>0 ? `點雲 ${m.n_pts} 點 · 3D 量測` : "RGB 輪廓量測 · 無高度";
+    }else{
+      ["#m_l","#m_w","#m_h","#m_t","#m_d"].forEach(id=>setVal(id,"—",
+        id==="#m_t"?"°":(id==="#m_d"?"m":"cm"),false));
+      $("#m_n").textContent = cfg.detect ? "搜尋中… 物體不在畫面中" : "點選畫面中的物體開始量測";
+    }
+    const matched = s.matched && s.match_via;
+    via.textContent = matched? "● 已辨識 "+s.match_via : ""; via.classList.toggle("on",!!matched);
+    // tag chips
+    const tag=$("#tag"); tag.innerHTML="";
+    if(s.fallen) tag.insertAdjacentHTML("beforeend",'<span class="chip warn">⚠ 跌倒/躺下</span>');
+    if(s.person) tag.insertAdjacentHTML("beforeend",`<span class="chip live">● 有人 ${s.dist>0?s.dist.toFixed(2)+'m':''}</span>`);
+    if(cfg.measure&&!m) tag.insertAdjacentHTML("beforeend",'<span class="chip">○ 待選取</span>');
+    // teach info
+    $("#tinfo").innerHTML = s.has_template? `樣板：<b style="color:var(--mint)">已教 ${s.n_views} 個視角</b>`
+                                          : "樣板：尚未教學（點選物體再按新增視角）";
+    if(s.msg){ $("#msg").innerHTML = "▸ "+s.msg;
+      if(s.msg!==lastMsg){ toast(s.msg); lastMsg=s.msg; } }
+    // 定位品檢結果
+    if(cfg.inspect){
+      const ins=s.inspect, vEl=$("#verdict");
+      if(ins){
+        vEl.className="verdict "+(ins.ng?"ng":"ok");
+        $("#vv").textContent=ins.verdict;
+        $("#vsNum").textContent=(ins.score!=null?ins.score.toFixed(0):"--");
+        $("#meterFill").style.width=(ins.score||0)+"%";
+        $("#vdetail").textContent =
+            ins.reason==="texture_low" ? "框內紋理不足，請框住有圖案/文字的面"
+          : ins.reason==="not_found"   ? "物體不在框內 / 找不到"
+          : ins.oob                    ? "⚠ 物體移出參考框 → NG"
+          : `位置吻合 · 歪斜 ${ins.skew}° · 門檻 ${cfg.inspect_thr} 分`;
+      }else{
+        vEl.className="verdict idle"; $("#vv").textContent="待設定";
+        $("#vsNum").textContent="--"; $("#vdetail").textContent="拖曳畫面框住物體四邊作為參考";
+        $("#meterFill").style.width="0%";
+      }
+    }
+    // ticker
+    $("#t_p").textContent=s.person?"YES":"no"; $("#t_p").className=s.person?"ok":"no";
+    $("#t_d").textContent=s.dist>0?s.dist.toFixed(2)+"m":"—";
+    $("#t_g").textContent=s.gesture||"—";
+    $("#t_f").textContent=(s.fingers||0)+" 指";
+    $("#t_r").textContent=(s.roll!=null?s.roll.toFixed(0):"0")+"°";
+    $("#t_m").textContent=cfg.detect?(matched?"LOCK":"scan"):"off";
+    $("#t_m").className=matched?"ok":"";
+  }catch(e){
+    link.classList.remove("on"); $("#linkTxt").textContent="AWAITING BACKEND";
+    ph.style.display="grid";
+  }
+}
+// ===== 模擬機器人 + 雷達 + 跌倒警報（從 Rust UI 移植）=====
+let lastStatus = {};
+const ARENA={w:900,h:320}, ROBOT_PX=64, OBST_MIN=0.3, OBST_MAX=4.0, HOLD=0.2;
+let avoidOn=false, drive="STOP", cmdAction="STOP", cmdDesc="停止", cmdUntil=0, keyAction=null;
+
+$("#avoidSw").addEventListener("click", function(){ avoidOn=!avoidOn; this.classList.toggle("on",avoidOn); });
+
+function actDT(a){return {FORWARD:[1,0],BACK:[-1,0],FORWARD_LEFT:[1,-1],FORWARD_RIGHT:[1,1],
+  BACK_LEFT:[-1,-1],BACK_RIGHT:[-1,1],LEFT:[0,-1],RIGHT:[0,1]}[a]||[0,0];}
+function fingerAction(f){ f=Math.min(5,f||0);
+  if(f===1){drive="FORWARD";return["FORWARD","前進"];}
+  if(f===4){drive="BACK";return["BACK","後退"];}
+  if(f===5){drive="STOP";return["RESET","歸位"];}
+  if(f===2)return drive==="FORWARD"?["FORWARD_LEFT","前進左轉"]:drive==="BACK"?["BACK_LEFT","後退左轉"]:["LEFT","左轉"];
+  if(f===3)return drive==="FORWARD"?["FORWARD_RIGHT","前進右轉"]:drive==="BACK"?["BACK_RIGHT","後退右轉"]:["RIGHT","右轉"];
+  drive="STOP";return["STOP","停止"];
+}
+function obstaclePoints(obs){ const c=obs.length; if(!c)return[]; const p=[];
+  for(let i=0;i<c;i++){const d=obs[i]; if(d<=0)continue;
+    const fr=Math.max(0,Math.min(1,(d-OBST_MIN)/(OBST_MAX-OBST_MIN)));
+    p.push([(i+0.5)/c*ARENA.w, ARENA.h*(0.92-0.84*fr)]); } return p; }
+
+const Robot={x:450,y:160,angle:-Math.PI/2,speed:1.2,turn:0.04,action:"STOP",
+  avoiding:false,stuck:0,escape:0,escDir:1,trail:[],
+  reset(){this.x=ARENA.w/2;this.y=ARENA.h/2;this.angle=-Math.PI/2;this.stuck=0;this.escape=0;this.trail=[];},
+  clamp(){const m=ROBOT_PX/2;this.x=Math.max(m,Math.min(ARENA.w-m,this.x));this.y=Math.max(m,Math.min(ARENA.h-m,this.y));},
+  ray(obs,h,mx){let m=mx;for(const[ox,oy]of obs){const dx=ox-this.x,dy=oy-this.y,d=Math.hypot(dx,dy);
+    if(d<1)return 0;let da=Math.atan2(dy,dx)-h;while(da>Math.PI)da-=2*Math.PI;while(da<-Math.PI)da+=2*Math.PI;
+    if(Math.abs(da)<0.5&&d<m)m=d;}
+    const mar=ROBOT_PX/2,cx=Math.cos(h),sy=Math.sin(h);
+    if(Math.abs(cx)>1e-3){const wx=cx>0?ARENA.w-mar-this.x:this.x-mar;m=Math.min(m,Math.max(0,wx/Math.abs(cx)));}
+    if(Math.abs(sy)>1e-3){const wy=sy>0?ARENA.h-mar-this.y:this.y-mar;m=Math.min(m,Math.max(0,wy/Math.abs(sy)));}
+    return m;},
+  step(obs,avoid){this.avoiding=false;
+    if(this.action==="RESET"){this.reset();return;}
+    const[dr,tn]=actDT(this.action); this.angle+=tn*this.turn;
+    if(dr===0){this.stuck=0;this.escape=0;return;}
+    const back=dr<0, PI=Math.PI;
+    if(!avoid){const s=back?-1:1;this.x+=s*this.speed*Math.cos(this.angle);this.y+=s*this.speed*Math.sin(this.angle);
+      this.clamp();this.trail.push([this.x,this.y]);if(this.trail.length>160)this.trail.shift();return;}
+    const desired=back?this.angle+PI:this.angle,mx=170,az=ROBOT_PX*0.95;
+    if(this.escape>0){this.escape--;this.avoiding=true;this.x-=1.6*Math.cos(desired);this.y-=1.6*Math.sin(desired);
+      this.angle+=this.escDir*this.turn*1.5;this.clamp();return;}
+    let best=desired,bs=-1e9;
+    for(let k=-7;k<=7;k++){const c=desired+k*0.16,cl=this.ray(obs,c,mx),sc=cl-Math.abs(c-desired)*55;if(sc>bs){bs=sc;best=c;}}
+    let da=best-this.angle;while(da>PI)da-=2*PI;while(da<-PI)da+=2*PI;
+    this.angle+=Math.max(-this.turn*2.2,Math.min(this.turn*2.2,da));
+    const dev=Math.abs(best-desired)>0.1, cl=this.ray(obs,this.angle,mx);
+    if(cl<=az){this.avoiding=true;this.stuck+=1;}
+    else{const sp=this.speed*Math.max(0.25,Math.min(1,(cl-az)/(mx-az))),s=back?-1:1;
+      this.x+=s*sp*Math.cos(this.angle);this.y+=s*sp*Math.sin(this.angle);this.stuck=Math.max(0,this.stuck-1.5);
+      this.avoiding=dev||cl<mx*0.75;this.trail.push([this.x,this.y]);if(this.trail.length>160)this.trail.shift();}
+    this.clamp();
+    if(this.stuck>42){this.escape=36;const l=this.ray(obs,this.angle-1.2,mx),r=this.ray(obs,this.angle+1.2,mx);
+      this.escDir=r>=l?1:-1;this.stuck=0;}},
+};
+const actx=$("#arena").getContext("2d");
+function drawArena(obs){
+  const W=ARENA.w,H=ARENA.h;
+  actx.fillStyle="#0c0a06"; actx.fillRect(0,0,W,H);
+  actx.strokeStyle="rgba(255,122,26,0.06)"; actx.lineWidth=1;
+  for(let x=0;x<W;x+=44){actx.beginPath();actx.moveTo(x,0);actx.lineTo(x,H);actx.stroke();}
+  for(let y=0;y<H;y+=44){actx.beginPath();actx.moveTo(0,y);actx.lineTo(W,y);actx.stroke();}
+  if(avoidOn)for(const[ox,oy]of obs){const n=oy/H;
+    actx.fillStyle=`rgb(${255*n+64*(1-n)|0},${90*n+214*(1-n)|0},${90*n+255*(1-n)|0})`;
+    actx.beginPath();actx.arc(ox,oy,4,0,7);actx.fill();}
+  for(let i=0;i<Robot.trail.length;i++){const a=i/Robot.trail.length*0.7+0.1;
+    actx.fillStyle=`rgba(255,122,26,${a})`;actx.beginPath();actx.arc(Robot.trail[i][0],Robot.trail[i][1],2,0,7);actx.fill();}
+  const r=ROBOT_PX/2.5; actx.fillStyle=Robot.avoiding?"#ffaa3c":"#4ade80";
+  actx.beginPath();actx.arc(Robot.x,Robot.y,r,0,7);actx.fill();
+  actx.strokeStyle="#fff";actx.lineWidth=3;actx.beginPath();actx.moveTo(Robot.x,Robot.y);
+  actx.lineTo(Robot.x+(r+12)*Math.cos(Robot.angle),Robot.y+(r+12)*Math.sin(Robot.angle));actx.stroke();
+}
+window.addEventListener("keydown",e=>{const m={ArrowUp:"FORWARD",ArrowDown:"BACK",ArrowLeft:"LEFT",ArrowRight:"RIGHT"," ":"STOP",r:"RESET",R:"RESET"};
+  if(m[e.key]!==undefined){keyAction=m[e.key];e.preventDefault();}});
+window.addEventListener("keyup",()=>{keyAction=null;});
+// 3D 點雲檢視：展開才向後端要資料(cfg.pcloud)
+const pcWrap=$("#pcWrap");
+$("#pcH2").addEventListener("click",()=>{
+  pcWrap.classList.toggle("closed");
+  const open=!pcWrap.classList.contains("closed");
+  $("#pcH2").textContent = open ? "▼ 即時 3D 點雲" : "▶ 即時 3D 點雲（點此展開）";
+  cfg.pcloud=open; pushCfg();
+  window.dispatchEvent(new CustomEvent("pcloud",{detail:open}));
+});
+
+const arenaWrap=$("#arenaWrap");
+$("#arenaH2").addEventListener("click",()=>{
+  arenaWrap.classList.toggle("closed");
+  $("#arenaH2").textContent = arenaWrap.classList.contains("closed")
+    ? "▶ 模擬機器人 · 雷達（點此展開）" : "▼ 模擬機器人 · 雷達";
+});
+function arenaLoop(){
+  if(arenaWrap.classList.contains("closed")){   // 收合時不模擬不繪製(省資源)
+    requestAnimationFrame(arenaLoop); return;
+  }
+  const now=performance.now()/1000; let desc;
+  if(keyAction){Robot.action=keyAction;desc="鍵盤控制";cmdUntil=0;}
+  else{ if(now>=cmdUntil){const[a,d]=fingerAction(lastStatus.fingers);cmdAction=a;cmdDesc=d;cmdUntil=now+HOLD;}
+    Robot.action=cmdAction;desc=cmdDesc;}
+  const obs=avoidOn?obstaclePoints(lastStatus.obstacles||[]):[];
+  Robot.step(obs,avoidOn); drawArena(obs);
+  $("#abadge").textContent=Robot.avoiding?"⚠ 避障中":desc;
+  requestAnimationFrame(arenaLoop);
+}
+requestAnimationFrame(arenaLoop);
+
+// 跌倒警報狀態機
+let fallSince=null, fallArmed=true;
+$("#fack").addEventListener("click",()=>$("#fall").classList.remove("show"));
+function fallCheck(s){
+  const now=performance.now()/1000;
+  if(s.fallen){ if(fallSince===null)fallSince=now; }
+  else{ fallSince=null; fallArmed=true; }
+  if(fallArmed && fallSince!==null && now-fallSince>=1.5){
+    fallArmed=false; post("/action/fall_snapshot");
+    $("#fsub").textContent=`軀幹傾角 ${(s.tilt||0).toFixed(0)}° · 已自動截圖存證`;
+    $("#fall").classList.add("show");
+  }
+}
+
+// 障礙物提醒：範圍內最近物體 ≤ 觸發距離 → 顯示視窗；持續顯示直到障礙物離開
+function obstacleCheck(s){
+  const o=s.obstacle, modal=$("#obs_modal");
+  if(o && o.on && o.hit){
+    $("#obs_sub").textContent=`最近 ${o.dist.toFixed(2)} m（觸發 ≤ ${(o.thr||0).toFixed(1)} m）`;
+    modal.classList.add("show");
+  }else{
+    modal.classList.remove("show");
+  }
+  // 面板即時狀態
+  const stat=$("#obs_stat"); if(!stat) return;
+  const vv=stat.querySelector(".vv");
+  if(o && o.on){
+    if(o.hit){ stat.className="verdict ng"; vv.textContent=`⚠ 障礙 ${o.dist.toFixed(2)}m`; }
+    else if(o.dist>0){ stat.className="verdict ok"; vv.textContent=`安全 · 最近 ${o.dist.toFixed(2)}m`; }
+    else { stat.className="verdict idle"; vv.textContent="範圍內無有效深度"; }
+  }else{ stat.className="verdict idle"; vv.textContent="待設定"; }
+}
+
+pushCfg();                 // 載入時把 UI 預設同步到後端
+syncInsp(); syncObs(); syncModeChips();
+setInterval(poll,200); poll();
+</script>
+
+<!-- 3D 點雲檢視器 (Three.js) -->
+<script type="importmap">
+{"imports":{"three":"https://unpkg.com/three@0.160.0/build/three.module.js",
+            "three/addons/":"https://unpkg.com/three@0.160.0/examples/jsm/"}}
+</script>
+<script type="module">
+import * as THREE from 'three';
+import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
+const canvas=document.getElementById('pc3d');
+let inited=false, open=false, fetching=false;
+let renderer, scene, camera, controls, geo;
+function init(){
+  renderer=new THREE.WebGLRenderer({canvas, antialias:false});
+  scene=new THREE.Scene();
+  camera=new THREE.PerspectiveCamera(60,1,0.01,50);
+  camera.position.set(0,0.35,1.0);
+  controls=new OrbitControls(camera,canvas);
+  controls.target.set(0,0,-0.9);
+  controls.enableDamping=true; controls.dampingFactor=0.12;
+  geo=new THREE.BufferGeometry();
+  const pts=new THREE.Points(geo,
+    new THREE.PointsMaterial({size:0.012, vertexColors:true}));
+  pts.frustumCulled=false;   // 串流幾何：避免空包圍球被快取後永遠剔除
+  scene.add(pts);
+  const grid=new THREE.GridHelper(4,20,0x4a4130,0x241f14);
+  grid.position.y=-0.6; scene.add(grid);
+  scene.add(new THREE.AxesHelper(0.2));
+  inited=true;
+}
+function resize(){
+  const w=canvas.clientWidth,h=canvas.clientHeight;
+  if(w&&h&&(canvas.width!==w||canvas.height!==h)){
+    renderer.setSize(w,h,false); camera.aspect=w/h; camera.updateProjectionMatrix();
+  }
+}
+async function pull(){
+  if(!open||fetching) return; fetching=true;
+  try{
+    const r=await fetch('/pointcloud.bin',{cache:'no-store'});
+    if(r.ok){
+      const buf=await r.arrayBuffer();
+      const n=new Uint32Array(buf.slice(0,4))[0];
+      if(n>0 && buf.byteLength>=4+n*15){
+        geo.setAttribute('position',
+          new THREE.BufferAttribute(new Float32Array(buf,4,n*3),3));
+        geo.setAttribute('color',
+          new THREE.BufferAttribute(new Uint8Array(buf,4+n*12,n*3),3,true));
+        geo.computeBoundingSphere();
+        document.getElementById('pcBadge').textContent=(n/1000).toFixed(1)+'k 點';
+      }
+    }
+  }catch(e){}
+  fetching=false;
+}
+setInterval(pull,140);
+(function loop(){
+  if(open&&inited){ resize(); controls.update(); renderer.render(scene,camera); }
+  requestAnimationFrame(loop);
+})();
+window.addEventListener('pcloud',e=>{ open=e.detail; if(open&&!inited)init(); });
+</script>
+</body>
+</html>

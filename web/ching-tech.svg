@@ -1,0 +1,171 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="350"
+   height="140"
+   viewBox="0 0 92.604164 37.041667"
+   version="1.1"
+   id="svg1"
+   sodipodi:docname="ching-tech.svg"
+   inkscape:version="1.4.2 (2aeb623e1d, 2025-05-12)"
+   xml:space="preserve"
+   inkscape:export-filename="mask-fanuc.svg"
+   inkscape:export-xdpi="96"
+   inkscape:export-ydpi="96"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg"><sodipodi:namedview
+     id="namedview1"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:document-units="mm"
+     inkscape:zoom="1.3464492"
+     inkscape:cx="185.30221"
+     inkscape:cy="112.51817"
+     inkscape:window-width="2560"
+     inkscape:window-height="1371"
+     inkscape:window-x="3360"
+     inkscape:window-y="612"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="layer1"
+     showgrid="false" /><defs
+     id="defs1"><linearGradient
+   id="swatch14"
+   inkscape:swatch="solid"><stop
+     style="stop-color:#ffe01a;stop-opacity:1;"
+     offset="0"
+     id="stop14" /></linearGradient>
+	
+
+		
+		
+		
+		
+		
+		
+		
+		
+	<filter
+   inkscape:collect="always"
+   style="color-interpolation-filters:sRGB"
+   id="filter34"
+   x="-0.0040145025"
+   y="-0.017010504"
+   width="1.008029"
+   height="1.034021"><feGaussianBlur
+     inkscape:collect="always"
+     stdDeviation="0.05625869"
+     id="feGaussianBlur34" /></filter><filter
+   inkscape:collect="always"
+   style="color-interpolation-filters:sRGB"
+   id="filter35"
+   x="-0.0033973506"
+   y="-0.017010501"
+   width="1.0067947"
+   height="1.034021"><feGaussianBlur
+     inkscape:collect="always"
+     stdDeviation="0.05625869"
+     id="feGaussianBlur35" /></filter><filter
+   inkscape:collect="always"
+   style="color-interpolation-filters:sRGB"
+   id="filter36"
+   x="-0.0063789379"
+   y="-0.0063789382"
+   width="1.0127579"
+   height="1.0127579"><feGaussianBlur
+     inkscape:collect="always"
+     stdDeviation="0.05625869"
+     id="feGaussianBlur36" /></filter></defs><g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1"><path
+       fill="#dddddd"
+       d="m 31.75,18.520833 c 0,5.845047 -4.738331,10.583333 -10.583114,10.583333 -5.845222,0 -10.583553,-4.738286 -10.583553,-10.583333 0,-5.845046 4.738331,-10.583333 10.583509,-10.583333 5.844827,0 10.583158,4.738287 10.583158,10.583333 z"
+       id="path35"
+       style="fill:#171c61;fill-opacity:1;stroke-width:0.0439243;filter:url(#filter36)" /><text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:7.9375px;font-family:'Noto Sans';-inkscape-font-specification:'Noto Sans, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;text-align:start;writing-mode:lr-tb;direction:ltr;text-anchor:start;display:inline;mix-blend-mode:normal;fill:#171c61;fill-opacity:1;stroke-width:11.4875;filter:url(#filter35)"
+       x="39.203407"
+       y="15.292903"
+       id="text35"><tspan
+         sodipodi:role="line"
+         id="tspan35"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:7.9375px;font-family:'Noto Sans';-inkscape-font-specification:'Noto Sans, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;fill:#171c61;fill-opacity:1;stroke-width:11.4875"
+         x="39.203407"
+         y="15.292903">Ching Tech</tspan></text><text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:8.59967px;font-family:'Noto Sans TC';-inkscape-font-specification:'Noto Sans TC, @wght=400';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;font-variation-settings:'wght' 400;text-align:start;writing-mode:lr-tb;direction:ltr;text-anchor:start;display:inline;mix-blend-mode:normal;fill:#171c61;fill-opacity:1;stroke-width:12.4458;filter:url(#filter34)"
+       x="43.406952"
+       y="27.093359"
+       id="text34"><tspan
+         sodipodi:role="line"
+         id="tspan34"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:8.59967px;font-family:'Noto Sans TC';-inkscape-font-specification:'Noto Sans TC, @wght=400';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;font-variation-settings:'wght' 400;fill:#171c61;fill-opacity:1;stroke-width:12.4458"
+         x="43.406952"
+         y="27.093359">擎添工業</tspan></text><path
+       fill="#dddddd"
+       d="m 31.75,18.520833 c 0,5.845047 -4.738331,10.583333 -10.583114,10.583333 -5.845222,0 -10.583553,-4.738286 -10.583553,-10.583333 0,-5.845046 4.738331,-10.583333 10.583509,-10.583333 5.844827,0 10.583158,4.738287 10.583158,10.583333 z"
+       id="path1-0"
+       style="stroke-width:0.0439243" /><path
+       fill="#7ebee3"
+       d="m 21.166491,18.520833 -10.583114,-3.95e-4 c 0,5.845442 4.738331,10.583728 10.583509,10.583728 z"
+       id="path2-3"
+       style="stroke-width:0.0439243" /><path
+       fill="#7ebee3"
+       d="M 21.166842,18.520833 H 31.749956 C 31.749956,12.675787 27.011625,7.9375 21.166447,7.9375 Z"
+       id="path3-0"
+       style="stroke-width:0.0439243" /><path
+       fill="#dddddd"
+       d="m 27.851018,18.520833 c 0,3.692055 -2.992868,6.684088 -6.684571,6.684088 -3.691308,0 -6.684176,-2.992033 -6.684176,-6.684088 0,-3.691659 2.992868,-6.684088 6.684176,-6.684088 3.691703,0 6.684571,2.992429 6.684571,6.684088 z"
+       id="path4-4"
+       style="stroke-width:0.0439243" /><path
+       fill="#1d96d5"
+       d="m 21.166842,18.520833 -3.95e-4,-6.684088 c -3.691308,0 -6.684176,2.992429 -6.684176,6.684088 z"
+       id="path5-4"
+       style="stroke-width:0.0439243" /><path
+       fill="#1d96d5"
+       d="m 21.166491,18.520833 3.95e-4,6.684088 c 3.691747,0 6.684176,-2.992033 6.684176,-6.684088 z"
+       id="path6-4"
+       style="stroke-width:0.0439243"
+       inkscape:label="path6-4" /><path
+       fill="#1c2a54"
+       d="m 18.08841,20.97172 v -4.901773 c 0.923024,0 1.72596,0.510444 2.143899,1.264184 l 0.438321,-0.242945 c -0.503548,-0.907651 -1.470673,-1.522459 -2.582176,-1.522459 -1.630337,0 -2.952151,1.321769 -2.952151,2.952106 0,1.630337 1.321814,2.952106 2.952151,2.952106 1.111503,0 2.078628,-0.614808 2.582176,-1.522459 L 20.232309,19.707535 C 19.81437,20.461276 19.011434,20.97172 18.08841,20.97172 Z"
+       id="path7-4"
+       style="fill:#171c61;fill-opacity:1;stroke-width:0.0439243" /><polygon
+       fill="#1c2a54"
+       points="388.232,188.791 260.731,188.791 260.731,200.15 297.08,200.15 297.08,323.209 351.324,323.209 351.324,200.15 388.232,200.15 "
+       id="polygon7"
+       transform="matrix(0.04392427,0,0,0.04392427,9.9220534,7.2762201)"
+       style="fill:#171c61;fill-opacity:1" /><text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:7.9375px;font-family:'Noto Sans';-inkscape-font-specification:'Noto Sans, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;text-align:start;writing-mode:lr-tb;direction:ltr;text-anchor:start;fill:#171c61;fill-opacity:1;stroke-width:11.4875"
+       x="39.20332"
+       y="15.292903"
+       id="text1"
+       inkscape:label="Ching Tech"><tspan
+         sodipodi:role="line"
+         id="tspan1"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:7.9375px;font-family:'Noto Sans';-inkscape-font-specification:'Noto Sans, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;fill:#171c61;fill-opacity:1;stroke-width:11.4875"
+         x="39.20332"
+         y="15.292903">Ching Tech</tspan></text><text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:8.59967px;font-family:'Noto Sans TC';-inkscape-font-specification:'Noto Sans TC, @wght=400';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;font-variation-settings:'wght' 400;text-align:start;writing-mode:lr-tb;direction:ltr;text-anchor:start;fill:#171c61;fill-opacity:1;stroke-width:12.4458"
+       x="43.406864"
+       y="27.093275"
+       id="text12"
+       inkscape:label="擎添工業"><tspan
+         sodipodi:role="line"
+         id="tspan12"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:8.59967px;font-family:'Noto Sans TC';-inkscape-font-specification:'Noto Sans TC, @wght=400';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;font-variation-settings:'wght' 400;fill:#171c61;fill-opacity:1;stroke-width:12.4458"
+         x="43.406864"
+         y="27.093275">擎添工業</tspan></text></g><g
+     inkscape:groupmode="layer"
+     id="layer2"
+     inkscape:label="Layer 2" /></svg>
