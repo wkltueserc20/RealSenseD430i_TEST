@@ -9,6 +9,8 @@ __pycache__/
 # Runtime / generated outputs
 scans/
 falls/
+# 註冊的人臉資料(隱私 · 本機保留，不上傳)
+faces/
 *.log
 
 # OS / editor

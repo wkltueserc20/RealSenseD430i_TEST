@@ -204,6 +204,12 @@ input[type=range]::-moz-range-thumb{width:15px;height:15px;border:0;border-radiu
 .oitem .od{margin-left:auto; color:var(--bone)}
 .oitem .ox{cursor:pointer; color:#ff8a7a; font-weight:700; padding:0 5px}
 .oempty{font-size:12px; color:#9a8c78; padding:4px 2px}
+.frow{display:flex; gap:6px; margin:8px 0}
+.frow input{flex:1; min-width:0; font-family:"Noto Sans TC",sans-serif; font-size:13px;
+  padding:7px 10px; border:1px solid var(--line); border-radius:8px; background:transparent;
+  color:var(--bone)}
+.frow input:focus{outline:none; border-color:var(--signal)}
+.frow .btn{flex:none; white-space:nowrap}
 
 /* ── footer ticker ── */
 .ticker{margin-top:26px; border:1px solid var(--line); border-radius:99px; padding:10px 18px;
@@ -591,6 +597,7 @@ header{border-bottom:2px solid #2c2517; padding-top:14px}
         <div class="mode" data-mode="measure">📐 量測</div>
         <div class="mode" data-mode="inspect">📦 品檢</div>
         <div class="mode" data-mode="obstacle">🚧 障礙</div>
+        <div class="mode" data-mode="face">🙂 人臉</div>
         <div class="mode" data-mode="watch">👁 監看</div>
         <div class="mode" data-mode="idle">○ 待機</div>
       </div>
@@ -641,6 +648,22 @@ header{border-bottom:2px solid #2c2517; padding-top:14px}
         <div class="tline" id="obs_hint">拖曳畫面畫出矩形範圍。可加多個；不畫＝整個畫面。</div>
         <div class="olist" id="obs_list"></div>
         <button class="btn full" id="obsClear">✖ 清除全部範圍</button>
+      </div>
+
+      <div class="panel insp" id="face" style="display:none">
+        <h2>人臉辨識</h2>
+        <div class="verdict idle" id="face_stat"><span class="vv">目前辨識：—</span></div>
+        <div class="frow">
+          <input id="face_name" placeholder="輸入名字後擷取樣本" maxlength="16" />
+          <button class="btn hot" id="face_cap">＋擷取</button>
+        </div>
+        <div class="slider">
+          <div class="row"><label>辨識門檻</label><b id="fthrV">70</b></div>
+          <input type="range" id="fthr" min="40" max="120" step="1" value="70" />
+        </div>
+        <div class="tline">對著鏡頭，輸入名字按「＋擷取」採集多張(建議 5～8 張，換角度/表情)。資料存 <code>faces/</code>，重開可直接用。門檻越低越嚴。</div>
+        <div class="olist" id="face_list"></div>
+        <button class="btn full" id="faceClear">✖ 清除全部人臉</button>
       </div>
 
       <div class="panel">
@@ -732,12 +755,12 @@ const $ = s => document.querySelector(s);
 // 本地設定狀態（與後端預設一致）
 const cfg = {pose:false,hands:false,depth:false,dfilter:true,flip:true,
              measure:false,level:true,detect:false,inspect:false,
-             obstacle:false,obstacle_dist:1.0,
+             obstacle:false,obstacle_dist:1.0,face:false,face_thr:70,
              pcloud:false,zoom:1.0,disp:800,inspect_thr:60};
 const TOGGLES = [
   ["measure","物體量測"],["detect","自動辨識"],["inspect","定位品檢"],["obstacle","障礙偵測"],
-  ["pose","偵測人"],["hands","偵測手勢"],["depth","深度圖"],["dfilter","深度濾鏡"],
-  ["flip","鏡像"],["level","IMU 自動水平"],
+  ["face","人臉辨識"],["pose","偵測人"],["hands","偵測手勢"],["depth","深度圖"],
+  ["dfilter","深度濾鏡"],["flip","鏡像"],["level","IMU 自動水平"],
 ];
 
 async function post(path, body){
@@ -758,6 +781,7 @@ tg.addEventListener("click", e=>{
   const k = sw.dataset.k; cfg[k] = !cfg[k]; sw.classList.toggle("on", cfg[k]); pushCfg();
   if(k==="inspect") syncInsp();
   if(k==="obstacle") syncObs();
+  if(k==="face") syncFace();
   syncModeChips();
 });
 function syncHint(){
@@ -775,6 +799,9 @@ function syncObs(){
   if(window.obsSync) window.obsSync();   // 切換 #obsLayer 疊圖啟用
   syncHint();
 }
+function syncFace(){
+  $("#face").style.display = cfg.face ? "block" : "none";
+}
 function syncSwitches(){
   document.querySelectorAll(".sw[data-k]").forEach(sw=>
     sw.classList.toggle("on", !!cfg[sw.dataset.k]));
@@ -786,17 +813,18 @@ document.querySelectorAll(".panel > h2").forEach(h=>
 
 // ── 情境模式（一鍵切換常用組合）──
 const PRESETS = {
-  measure: {measure:true , inspect:false, obstacle:false, pose:false, hands:false},
-  inspect: {measure:false, inspect:true , obstacle:false, pose:false, hands:false},
-  obstacle:{measure:false, inspect:false, obstacle:true , pose:false, hands:false},
-  watch:   {measure:false, inspect:false, obstacle:false, pose:true , hands:true },
-  idle:    {measure:false, inspect:false, obstacle:false, pose:false, hands:false},
+  measure: {measure:true , inspect:false, obstacle:false, face:false, pose:false, hands:false},
+  inspect: {measure:false, inspect:true , obstacle:false, face:false, pose:false, hands:false},
+  obstacle:{measure:false, inspect:false, obstacle:true , face:false, pose:false, hands:false},
+  face:    {measure:false, inspect:false, obstacle:false, face:true , pose:false, hands:false},
+  watch:   {measure:false, inspect:false, obstacle:false, face:false, pose:true , hands:true },
+  idle:    {measure:false, inspect:false, obstacle:false, face:false, pose:false, hands:false},
 };
 $("#modes").addEventListener("click", e=>{
   const m=e.target.closest(".mode"); if(!m) return;
   Object.assign(cfg, PRESETS[m.dataset.mode]);
   document.querySelectorAll(".mode").forEach(x=>x.classList.toggle("on",x===m));
-  syncSwitches(); syncInsp(); syncObs(); pushCfg();
+  syncSwitches(); syncInsp(); syncObs(); syncFace(); pushCfg();
 });
 function syncModeChips(){           // 手動開關後反推目前是哪個模式
   const cur=Object.entries(PRESETS).find(([,p])=>
@@ -818,7 +846,10 @@ thr.addEventListener("input",()=>{cfg.inspect_thr=parseInt(thr.value);$("#thrV")
 const odist=$("#odist");
 odist.addEventListener("input",()=>{cfg.obstacle_dist=parseFloat(odist.value);
   $("#odistV").textContent=cfg.obstacle_dist.toFixed(1)+" m"; setFill(odist); debounced();});
-[zoom,disp,thr,odist].forEach(setFill);
+const fthr=$("#fthr");
+fthr.addEventListener("input",()=>{cfg.face_thr=parseInt(fthr.value);
+  $("#fthrV").textContent=cfg.face_thr; setFill(fthr); debounced();});
+[zoom,disp,thr,odist,fthr].forEach(setFill);
 
 // 浮動通知
 let lastMsg="";
@@ -924,7 +955,7 @@ async function poll(){
   try{
     const s = await (await fetch("/status",{cache:"no-store"})).json();
     link.classList.add("on"); $("#linkTxt").textContent="LINK ONLINE"; startStream();
-    lastStatus = s; fallCheck(s); obstacleCheck(s);
+    lastStatus = s; fallCheck(s); obstacleCheck(s); faceUpdate(s);
     const m=s.measure;
     if(m){
       setVal("#m_l",(m.length*100).toFixed(1),"cm",true);
@@ -1282,8 +1313,46 @@ function obstacleCheck(s){
   renderList();
 })();
 
+// ===== 人臉辨識：註冊 / 清單 / 即時辨識顯示 =====
+function faceUpdate(s){
+  const stat=$("#face_stat");
+  if(stat){
+    const vv=stat.querySelector(".vv"), fs=s.faces||[];
+    const known=fs.filter(f=>f.name&&f.name!=="未知").map(f=>f.name);
+    if(!cfg.face){ stat.className="verdict idle"; vv.textContent="目前辨識：未啟用"; }
+    else if(known.length){ stat.className="verdict ok"; vv.textContent="目前辨識："+known.join("、"); }
+    else if(fs.length){ stat.className="verdict ng"; vv.textContent=`偵測到 ${fs.length} 張臉 · 未知`; }
+    else { stat.className="verdict idle"; vv.textContent="目前辨識：（無人臉）"; }
+  }
+  const el=$("#face_list"); if(!el) return;
+  const db=s.faces_db||[];
+  const sig=db.map(p=>p.name+":"+p.samples).join("|");
+  if(el._sig===sig) return; el._sig=sig;          // 內容沒變就不重繪(避免點擊被打斷)
+  if(!db.length){ el.innerHTML='<div class="oempty">尚無註冊 · 輸入名字＋擷取來新增</div>'; return; }
+  el.innerHTML="";
+  db.forEach(p=>{
+    const row=document.createElement("div"); row.className="oitem";
+    const dot=document.createElement("span"); dot.className="ohit"; dot.style.background="#7aa2ff";
+    const nm=document.createElement("span"); nm.textContent=p.name;
+    const cnt=document.createElement("span"); cnt.className="od"; cnt.textContent=p.samples+" 張";
+    const x=document.createElement("span"); x.className="ox"; x.title="刪除"; x.textContent="✕";
+    x.addEventListener("click",()=>{ post("/face/delete",{name:p.name}); el._sig=null; });
+    row.append(dot,nm,cnt,x); el.appendChild(row);
+  });
+}
+function doEnroll(){
+  const inp=$("#face_name"), name=inp.value.trim();
+  if(!name){ toast("請先輸入名字"); inp.focus(); return; }
+  if(!cfg.face){ cfg.face=true; syncSwitches(); syncFace(); syncModeChips(); pushCfg(); }
+  post("/face/enroll",{name});                    // 結果訊息會經 status.msg 以 toast 顯示
+}
+$("#face_cap").addEventListener("click",doEnroll);
+$("#face_name").addEventListener("keydown",e=>{ if(e.key==="Enter") doEnroll(); });
+$("#faceClear").addEventListener("click",()=>{ post("/face/clear");
+  const el=$("#face_list"); if(el) el._sig=null; toast("已清除全部人臉"); });
+
 pushCfg();                 // 載入時把 UI 預設同步到後端
-syncInsp(); syncObs(); syncModeChips();
+syncInsp(); syncObs(); syncFace(); syncModeChips();
 setInterval(poll,200); poll();
 </script>
 
@@ -1348,5 +1417,8 @@ setInterval(pull,140);
 })();
 window.addEventListener('pcloud',e=>{ open=e.detail; if(open&&!inited)init(); });
 </script>
+
+<!-- PAGE 模擬模式：無後端/無相機時(github.io 或 ?demo=1)讓介面可 DEMO -->
+<script src="demo.js"></script>
 </body>
 </html>

@@ -21,6 +21,7 @@ pip install -r requirements.txt
 | 🎯 教學辨識 | 多視角 ORB 樣板(各角度各教一次) + 四道驗證 → 物體入畫面自動辨識量測 |
 | 👁 人體偵測 | 多人骨架 + 深度挑主體、跌倒偵測 + 警報彈窗 + 自動截圖(`falls/`) |
 | ✋ 手勢控制 | 手指數 → 模擬機器人(前進/後退/轉向/避障雷達) |
+| 🚧 障礙物檢測 | 在畫面畫**多個任意形狀範圍**(矩形拖曳/多邊形點擊/手繪圈選) → 範圍內最近物體 ≤ 觸發距離時該框亮紅 + 跳提醒視窗(持續到障礙離開);各範圍即時顯示距離 |
 | 📸 點雲擷取 | 一鍵存彩色點雲 `.ply`(`scans/`) |
 | ⚙ 顯示 | IMU 自動水平校正、縮放/畫布滑桿、深度濾鏡(去噪/補洞)、自動範圍深度圖 |
 
@@ -36,10 +37,12 @@ vision_server.py（唯一程式，獨佔相機）
        ├─ GET  /frame.jpg   單張影像
        ├─ GET  /status /measure   狀態/量測 JSON
        ├─ POST /config      {pose,hands,depth,flip,dfilter,measure,level,
-       │                     detect,inspect,zoom,disp,inspect_thr}
+       │                     detect,inspect,zoom,disp,inspect_thr,
+       │                     obstacle,obstacle_dist}
        ├─ POST /action/pick {u,v} · /clear_pick · /teach · /detect
        │       /clear_template · /fall_snapshot
        ├─ POST /inspect/box {x0,y0,x1,y1} · /inspect/clear
+       ├─ POST /obstacle/regions {regions:[[[x,y],…],…]} · /obstacle/clear
        └─ POST /scan        擷取點雲
 ```
 
@@ -63,6 +66,7 @@ vision_server.py（唯一程式，獨佔相機）
 - **情境模式**：📐量測 / 📦品檢 / 👁監看 / ○待機 一鍵切換
 - **量測**：點畫面上的物體；**品檢**：拖曳畫參考框,移動物體看 OK/NG 分數
 - **教學**：點選物體 → ➕新增視角(各角度重複) → 開自動辨識
+- **障礙檢測**：開🚧障礙 → 選畫法(▭矩形拖曳 / ⬠多邊形點擊,雙擊或點回起點收尾 / ✏手繪圈選) → 在畫面畫一或多個範圍;拉「觸發距離」設門檻,右側清單可單獨刪除或一鍵清除(不畫＝整個畫面)
 - 面板標題可點擊收合；模擬機器人區塊預設收合(展開才運算)
 - 鍵盤(機器人)：↑↓←→ 移動、空白停、R 歸位
 
