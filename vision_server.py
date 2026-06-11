@@ -56,7 +56,9 @@ class Config:
         self.obstacle_regions = []  # 檢測範圍清單；每個=多邊形 [[x,y],...] 顯示座標；空=整個畫面
         self.obstacle_dist = 1.0  # 觸發距離(公尺)；任一範圍最近深度<=此值即警報
         self.face = False       # 人臉辨識開關
+        self.face_engine = "lbph"  # 辨識引擎：lbph / arcface
         self.face_thr = 70.0    # LBPH 距離門檻(越小越嚴)；<=此值才顯示名字
+        self.face_sim = 0.35    # ArcFace 餘弦相似度門檻(越大越嚴)；>=此值才顯示名字
         self.face_enroll = None  # 一次性：擷取目前畫面的臉當作此名字的樣本
         self.face_delete = None  # 一次性：刪除此名字的人臉資料
         self.face_clear = False  # 一次性：清除所有人臉資料
@@ -786,6 +788,7 @@ def process_frame(state, cfg, frames, align, pc, hands, pose, ts):
         c_obstacle = cfg.obstacle
         c_oregions, c_odist = list(cfg.obstacle_regions), cfg.obstacle_dist
         c_face, c_face_thr = cfg.face, cfg.face_thr
+        c_face_engine, c_face_sim = cfg.face_engine, cfg.face_sim
         c_face_enroll = cfg.face_enroll; cfg.face_enroll = None
         c_face_delete = cfg.face_delete; cfg.face_delete = None
         c_face_clear = cfg.face_clear; cfg.face_clear = False
@@ -877,31 +880,32 @@ def process_frame(state, cfg, frames, align, pc, hands, pose, ts):
     if c_face_delete:
         fu.DB.delete(c_face_delete); status["msg"] = f"已刪除「{c_face_delete}」的人臉資料"
     faces_out = []
+    fu.DB.set_engine(c_face_engine)                       # 切換引擎(內部改變才重載)
+    fu.DB.thr_lbph, fu.DB.thr_arc = c_face_thr, c_face_sim
     if c_face or c_face_enroll:
-        fu.DB.thr = c_face_thr
-        fgray = cv2.cvtColor(color, cv2.COLOR_BGR2GRAY)   # 顯示座標灰階(框會對齊串流)
-        boxes = fu.detect_faces(fgray)
+        dets = fu.detect(color)                           # 顯示座標偵測 → 框對齊串流
         if c_face_enroll:                                 # 一次性：擷取最大那張臉
-            if boxes:
-                ok, msg = fu.DB.enroll(c_face_enroll, fgray, boxes[0])
+            if dets:
+                ok, msg = fu.DB.enroll(c_face_enroll, color, dets[0])
             else:
                 msg = "沒偵測到人臉，正對鏡頭、靠近一點再擷取"
             status["msg"] = msg
         if c_face:
             labels = []
-            for b in boxes:
-                name, conf = fu.DB.recognize(fgray, b)
-                x, y, bw, bh = b
+            for d in dets:
+                name, score = fu.DB.recognize(color, d)
+                x, y, bw, bh = d["box"]
                 col = (0, 220, 0) if name else (0, 170, 255)   # 綠=認得 橙=未知
                 cv2.rectangle(color, (x, y), (x + bw, y + bh), col, 2)
-                labels.append((x + 2, max(0, y - 28),
-                               name if name else "未知", col))
+                labels.append((x + 2, max(0, y - 28), name if name else "未知", col))
                 faces_out.append({"name": name or "未知",
-                                  "conf": round(conf, 1), "box": [x, y, bw, bh]})
+                                  "score": score, "box": [x, y, bw, bh]})
             if labels:
                 fu.draw_labels(color, labels)
     status["faces"] = faces_out
     status["faces_db"] = fu.DB.people()
+    status["face_engine"] = fu.DB.effective()             # 實際使用引擎(可能退回 lbph)
+    status["arc_available"] = fu.DB.arc_available()
 
     # 物體量測（點選 or 自動辨識 → 3D 點雲 + PCA OBB；水平校正後座標系）
     if c_measure:
@@ -1181,6 +1185,10 @@ def make_api(state):
                 c.obstacle_dist = float(max(0.2, min(6.0, d["obstacle_dist"])))
             if "face_thr" in d:
                 c.face_thr = float(max(20, min(130, d["face_thr"])))
+            if "face_sim" in d:
+                c.face_sim = float(max(0.1, min(0.9, d["face_sim"])))
+            if "face_engine" in d:
+                c.face_engine = "arcface" if d["face_engine"] == "arcface" else "lbph"
             if "zoom" in d:
                 c.zoom = float(max(0.3, min(3.0, d["zoom"])))
             if "disp" in d:

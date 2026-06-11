@@ -6,3 +6,8 @@ fastapi>=0.110
 uvicorn>=0.27
 requests>=2.31
 pillow>=10.0
+
+# 人臉辨識(LBPH 引擎)需要 cv2.face：若 `import cv2; cv2.face` 失敗請改裝
+#   opencv-contrib-python>=4.13   （與 opencv-python 擇一，含 contrib 模組）
+# 人臉辨識(ArcFace 引擎，選用，更準/抗側臉)：
+#   onnxruntime>=1.17             （另需 models/arcface.onnx，見 README）

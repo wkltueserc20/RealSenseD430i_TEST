@@ -13,6 +13,10 @@ falls/
 faces/
 *.log
 
+# ArcFace / 人臉偵測 模型(較大 · 本機自行下載，見 README)
+models/arcface.onnx
+models/blaze_face_short_range.tflite
+
 # OS / editor
 Thumbs.db
 .DS_Store

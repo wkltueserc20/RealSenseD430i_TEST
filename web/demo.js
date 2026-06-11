@@ -121,8 +121,10 @@
     const names=Object.keys(S.faces);
     st.faces_db = names.map(n=>({name:n, samples:S.faces[n]}));
     if(c.face){ const nm=names.length?names[names.length-1]:null;
-      st.faces=[{name:nm||"未知", conf:nm?34:92, box:headBox(f)}]; }
+      st.faces=[{name:nm||"未知", score:nm?0.6:0.1, box:headBox(f)}]; }
     else st.faces=[];
+    st.face_engine = c.face_engine||"lbph";   // DEMO 兩種引擎都當可用
+    st.arc_available = true;
     // 障礙
     const thr=c.obstacle_dist||1.0;
     if(c.obstacle){

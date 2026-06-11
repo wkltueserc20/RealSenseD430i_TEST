@@ -652,16 +652,25 @@ header{border-bottom:2px solid #2c2517; padding-top:14px}
 
       <div class="panel insp" id="face" style="display:none">
         <h2>人臉辨識</h2>
+        <div class="omodes" id="fengine">
+          <button class="omode on" data-fe="lbph">LBPH 輕量</button>
+          <button class="omode" data-fe="arcface">ArcFace 深度</button>
+        </div>
+        <div class="tline" id="face_engine_note"></div>
         <div class="verdict idle" id="face_stat"><span class="vv">目前辨識：—</span></div>
         <div class="frow">
           <input id="face_name" placeholder="輸入名字後擷取樣本" maxlength="16" />
           <button class="btn hot" id="face_cap">＋擷取</button>
         </div>
-        <div class="slider">
-          <div class="row"><label>辨識門檻</label><b id="fthrV">70</b></div>
+        <div class="slider" id="fthr_wrap">
+          <div class="row"><label>辨識門檻（距離）</label><b id="fthrV">70</b></div>
           <input type="range" id="fthr" min="40" max="120" step="1" value="70" />
         </div>
-        <div class="tline">對著鏡頭，輸入名字按「＋擷取」採集多張(建議 5～8 張，換角度/表情)。資料存 <code>faces/</code>，重開可直接用。門檻越低越嚴。</div>
+        <div class="slider" id="fsim_wrap" style="display:none">
+          <div class="row"><label>相似度門檻</label><b id="fsimV">0.35</b></div>
+          <input type="range" id="fsim" min="0.20" max="0.70" step="0.01" value="0.35" />
+        </div>
+        <div class="tline">對著鏡頭，輸入名字按「＋擷取」採集多張(建議 5～8 張，換角度/表情)。資料存 <code>faces/</code>，重開可直接用。LBPH 門檻越低越嚴；ArcFace 相似度越高越嚴。</div>
         <div class="olist" id="face_list"></div>
         <button class="btn full" id="faceClear">✖ 清除全部人臉</button>
       </div>
@@ -756,6 +765,7 @@ const $ = s => document.querySelector(s);
 const cfg = {pose:false,hands:false,depth:false,dfilter:true,flip:true,
              measure:false,level:true,detect:false,inspect:false,
              obstacle:false,obstacle_dist:1.0,face:false,face_thr:70,
+             face_engine:"lbph",face_sim:0.35,
              pcloud:false,zoom:1.0,disp:800,inspect_thr:60};
 const TOGGLES = [
   ["measure","物體量測"],["detect","自動辨識"],["inspect","定位品檢"],["obstacle","障礙偵測"],
@@ -849,7 +859,21 @@ odist.addEventListener("input",()=>{cfg.obstacle_dist=parseFloat(odist.value);
 const fthr=$("#fthr");
 fthr.addEventListener("input",()=>{cfg.face_thr=parseInt(fthr.value);
   $("#fthrV").textContent=cfg.face_thr; setFill(fthr); debounced();});
-[zoom,disp,thr,odist,fthr].forEach(setFill);
+const fsim=$("#fsim");
+fsim.addEventListener("input",()=>{cfg.face_sim=parseFloat(fsim.value);
+  $("#fsimV").textContent=cfg.face_sim.toFixed(2); setFill(fsim); debounced();});
+[zoom,disp,thr,odist,fthr,fsim].forEach(setFill);
+// 人臉引擎切換
+function syncFaceEngine(){
+  document.querySelectorAll("#fengine .omode").forEach(b=>
+    b.classList.toggle("on", b.dataset.fe===cfg.face_engine));
+  $("#fthr_wrap").style.display = cfg.face_engine==="arcface" ? "none" : "block";
+  $("#fsim_wrap").style.display = cfg.face_engine==="arcface" ? "block" : "none";
+}
+$("#fengine").addEventListener("click",e=>{
+  const b=e.target.closest(".omode"); if(!b) return;
+  cfg.face_engine=b.dataset.fe; syncFaceEngine(); pushCfg();
+});
 
 // 浮動通知
 let lastMsg="";
@@ -1315,6 +1339,16 @@ function obstacleCheck(s){
 
 // ===== 人臉辨識：註冊 / 清單 / 即時辨識顯示 =====
 function faceUpdate(s){
+  // 引擎狀態 / 可用性提示
+  const note=$("#face_engine_note");
+  if(note){
+    if(cfg.face_engine==="arcface" && s.arc_available===false)
+      note.innerHTML='⚠ ArcFace 不可用（需 <code>pip install onnxruntime</code> + 放 <code>models/arcface.onnx</code>），已暫用 LBPH';
+    else if(cfg.face_engine==="arcface")
+      note.textContent="ArcFace：深度 embedding，較準、抗側臉";
+    else
+      note.textContent="LBPH：輕量、零額外檔案，以正面為主";
+  }
   const stat=$("#face_stat");
   if(stat){
     const vv=stat.querySelector(".vv"), fs=s.faces||[];
@@ -1352,7 +1386,7 @@ $("#faceClear").addEventListener("click",()=>{ post("/face/clear");
   const el=$("#face_list"); if(el) el._sig=null; toast("已清除全部人臉"); });
 
 pushCfg();                 // 載入時把 UI 預設同步到後端
-syncInsp(); syncObs(); syncFace(); syncModeChips();
+syncInsp(); syncObs(); syncFace(); syncFaceEngine(); syncModeChips();
 setInterval(poll,200); poll();
 </script>
 
