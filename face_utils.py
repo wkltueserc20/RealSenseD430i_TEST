@@ -21,8 +21,17 @@ ArcFace 的 embedding 於載入/註冊時即時算出(快取在記憶體)。
 import os
 import json
 import threading
+import itertools
 import numpy as np
 import cv2
+
+
+def _stat(xs):
+    a = np.asarray(xs, dtype=float)
+    if a.size == 0:
+        return None
+    return {"n": int(a.size), "min": round(float(a.min()), 3),
+            "mean": round(float(a.mean()), 3), "max": round(float(a.max()), 3)}
 
 FACE_DIR = "faces"
 MODEL_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "models")
@@ -346,6 +355,67 @@ class FaceDB:
         for p in list(self._people):
             self.delete(p["name"])
         self.names = {}; self._save_names(); self.reload()
+
+    def arc_embeddings(self):
+        """為所有樣本算 ArcFace embedding(不論目前引擎)。
+        回傳 [(name, [emb,…]), …]，arc 不可用回 None。"""
+        if not _EMB.available():
+            return None
+        out = []
+        for fid in sorted(self.names):
+            embs = []
+            for p in self._files(fid):
+                crop = self._imread(p)
+                if crop is None:
+                    continue
+                try:
+                    embs.append(_EMB.embed(cv2.resize(crop, (ARC_SIZE, ARC_SIZE))))
+                except Exception:
+                    pass
+            if embs:
+                out.append((self.names[fid], embs))
+        return out
+
+    def eval_separation(self):
+        """同一人 vs 不同人 的餘弦分離度 + 建議門檻(給 face_eval.py 與 /face/eval 共用)。"""
+        res = {"available": False, "default_thr": DEFAULT_SIM_ARC, "people": [],
+               "intra": [], "intra_all": None, "inter": [], "inter_all": None,
+               "separation": None}
+        embs = self.arc_embeddings()
+        if embs is None:
+            return res
+        res["available"] = True
+        res["people"] = [{"name": n, "samples": len(e)} for n, e in embs]
+        all_intra, all_inter = [], []
+        for n, e in embs:
+            pair = [float(np.dot(a, b)) for a, b in itertools.combinations(e, 2)]
+            all_intra += pair
+            res["intra"].append({"name": n, **(_stat(pair) or {"n": 0})})
+        for (n1, e1), (n2, e2) in itertools.combinations(embs, 2):
+            pair = [float(np.dot(a, b)) for a in e1 for b in e2]
+            all_inter += pair
+            s = _stat(pair) or {}
+            res["inter"].append({"a": n1, "b": n2,
+                                 "mean": s.get("mean"), "max": s.get("max")})
+        res["intra_all"], res["inter_all"] = _stat(all_intra), _stat(all_inter)
+        if all_intra and all_inter:
+            lo, hi = min(all_intra), max(all_inter)
+            gap = lo - hi
+            if gap > 0:
+                sugg, acc = round((lo + hi) / 2, 2), 1.0
+            else:
+                tot = len(all_intra) + len(all_inter)
+                best_t, best_acc = DEFAULT_SIM_ARC, 0.0
+                for t in sorted({round(x, 3) for x in all_intra + all_inter}):
+                    acc = (sum(x >= t for x in all_intra) +
+                           sum(x < t for x in all_inter)) / tot
+                    if acc > best_acc:
+                        best_acc, best_t = acc, t
+                sugg, acc = round(best_t, 2), round(best_acc, 3)
+            res["separation"] = {"intra_min": round(lo, 3), "inter_max": round(hi, 3),
+                                 "gap": round(gap, 3), "separable": gap > 0,
+                                 "suggested": sugg, "acc": acc}
+        return res
 
     def recognize(self, bgr, det):
         """回傳 (name 或 None, score)。lbph: score=距離(小=像)；arcface: score=餘弦(大=像)。"""

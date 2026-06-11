@@ -213,6 +213,11 @@ input[type=range]::-moz-range-thumb{width:15px;height:15px;border:0;border-radiu
 .frename{flex:1; min-width:0; font:13px "Noto Sans TC",sans-serif; padding:2px 7px;
   border:1px solid var(--signal); border-radius:6px; background:transparent; color:var(--bone)}
 .frename:focus{outline:none}
+.feval{font-family:"IBM Plex Mono",monospace; font-size:11px; line-height:1.65;
+  color:var(--bone); margin:6px 0; max-height:240px; overflow:auto}
+.feval b{font-family:"Noto Sans TC",sans-serif}
+.feval a{color:var(--signal); cursor:pointer}
+.feval .row2{opacity:.85}
 
 /* ── footer ticker ── */
 .ticker{margin-top:26px; border:1px solid var(--line); border-radius:99px; padding:10px 18px;
@@ -675,6 +680,8 @@ header{border-bottom:2px solid #2c2517; padding-top:14px}
         </div>
         <div class="tline">對著鏡頭，輸入名字按「＋擷取」採集多張(建議 5～8 張，換角度/表情)。資料存 <code>faces/</code>，重開可直接用。LBPH 門檻越低越嚴；ArcFace 相似度越高越嚴。</div>
         <div class="olist" id="face_list"></div>
+        <button class="btn full" id="faceEval">📊 分析分離度（ArcFace）</button>
+        <div class="feval" id="face_eval_out"></div>
         <button class="btn full" id="faceClear">✖ 清除全部人臉</button>
       </div>
 
@@ -1410,6 +1417,40 @@ $("#face_cap").addEventListener("click",doEnroll);
 $("#face_name").addEventListener("keydown",e=>{ if(e.key==="Enter") doEnroll(); });
 $("#faceClear").addEventListener("click",()=>{ post("/face/clear");
   const el=$("#face_list"); if(el) el._sig=null; toast("已清除全部人臉"); });
+// 分析分離度（畫面內顯示）
+const fesc=s=>String(s).replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
+async function doFaceEval(){
+  const out=$("#face_eval_out"); out.textContent="分析中…";
+  let r; try{ r=await (await fetch("/face/eval",{cache:"no-store"})).json(); }
+  catch(e){ out.textContent="分析失敗（後端沒回應？）"; return; }
+  if(!r.available){ out.innerHTML="⚠ 需 ArcFace 才能分析（裝 onnxruntime + 放 models/arcface.onnx，引擎切到 ArcFace）"; return; }
+  if(!r.people.length){ out.textContent="尚無註冊資料，先採集幾個人。"; return; }
+  let h="<b>同一人</b>（越高越好）<br>";
+  r.intra.forEach(p=> h+= p.n
+    ? `<span class="row2">· ${fesc(p.name)}: 平均 ${p.mean}（${p.min}~${p.max}, ${p.n}對）</span><br>`
+    : `<span class="row2">· ${fesc(p.name)}: 樣本不足（需≥2張）</span><br>`);
+  if(r.intra_all) h+=`= 全部同人 平均 <b>${r.intra_all.mean}</b>（最低 ${r.intra_all.min}）<br>`;
+  h+="<b>不同人</b>（越低越好）<br>";
+  r.inter.forEach(p=> h+=`<span class="row2">· ${fesc(p.a)}↔${fesc(p.b)}: 平均 ${p.mean}（最高 ${p.max}）</span><br>`);
+  if(r.inter_all) h+=`= 全部不同人 平均 <b>${r.inter_all.mean}</b>（最高 ${r.inter_all.max}）<br>`;
+  const s=r.separation;
+  if(!s){ h+='<br>人數/樣本不足（需≥2人、至少一人≥2張）才看得到分離度。'; }
+  else if(s.separable){
+    h+=`<br><b style="color:#4ade80">✅ 分得開</b> 同人最低 ${s.intra_min} &gt; 不同人最高 ${s.inter_max}<br>`;
+    h+=`建議門檻 <b>${s.suggested}</b> <a id="faceApplyThr">套用</a>`;
+  }else{
+    h+=`<br><b style="color:#ffaa3c">⚠ 有重疊</b> 同人最低 ${s.intra_min} ≤ 不同人最高 ${s.inter_max}<br>`;
+    h+=`多採幾張不同角度會更好。此資料最佳門檻 <b>${s.suggested}</b>（正確率 ${Math.round(s.acc*100)}%） <a id="faceApplyThr">套用</a>`;
+  }
+  out.innerHTML=h;
+  const ap=$("#faceApplyThr");
+  if(ap&&s) ap.addEventListener("click",()=>{
+    cfg.face_engine="arcface"; cfg.face_sim=s.suggested;
+    fsim.value=s.suggested; $("#fsimV").textContent=s.suggested.toFixed(2); setFill(fsim);
+    syncFaceEngine(); pushCfg(); toast("已套用建議門檻 "+s.suggested);
+  });
+}
+$("#faceEval").addEventListener("click",doFaceEval);
 
 pushCfg();                 // 載入時把 UI 預設同步到後端
 syncInsp(); syncObs(); syncFace(); syncFaceEngine(); syncModeChips();

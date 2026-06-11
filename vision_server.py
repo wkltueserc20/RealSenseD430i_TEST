@@ -1330,6 +1330,10 @@ def make_api(state):
             state.cfg.face_clear = True
         return {"ok": True}
 
+    @api.get("/face/eval")
+    def face_eval():
+        return JSONResponse(fu.DB.eval_separation())
+
     @api.post("/face/rename")
     async def face_rename(req: Request):
         d = await req.json()

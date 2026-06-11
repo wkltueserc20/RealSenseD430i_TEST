@@ -151,6 +151,20 @@
       if(path==="/measure") return Promise.resolve(jsonResp({}));
       if(path==="/pointcloud.bin")
         return Promise.resolve(new Response(new Uint8Array(4).buffer,{status:200}));
+      if(path==="/face/eval"){                  // DEMO：用註冊名單編一份漂亮的分離度
+        const nm=Object.keys(S.faces);
+        const people=nm.map(n=>({name:n,samples:S.faces[n]}));
+        const intra=nm.map(n=>({name:n, n:Math.max(0,(S.faces[n]*(S.faces[n]-1))/2|0),
+          min:0.55, mean:0.68, max:0.81}));
+        const inter=[]; for(let i=0;i<nm.length;i++) for(let j=i+1;j<nm.length;j++)
+          inter.push({a:nm[i], b:nm[j], mean:0.09, max:0.17});
+        const sep = nm.length>=2 ? {intra_min:0.55, inter_max:0.17, gap:0.38,
+          separable:true, suggested:0.35, acc:1.0} : null;
+        return Promise.resolve(jsonResp({available:true, default_thr:0.35, people,
+          intra, intra_all: nm.length?{n:1,min:0.55,mean:0.68,max:0.81}:null,
+          inter, inter_all: inter.length?{n:1,min:0.04,mean:0.09,max:0.17}:null,
+          separation:sep}));
+      }
       if(m==="POST"){
         let b={}; try{ b=JSON.parse((opt&&opt.body)||"{}"); }catch(e){}
         if(path==="/config") Object.assign(S.cfg, b);
