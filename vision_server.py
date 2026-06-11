@@ -62,6 +62,7 @@ class Config:
         self.face_enroll = None  # 一次性：擷取目前畫面的臉當作此名字的樣本
         self.face_delete = None  # 一次性：刪除此名字的人臉資料
         self.face_clear = False  # 一次性：清除所有人臉資料
+        self.face_rename = None  # 一次性：(舊名, 新名) 改名(保留樣本)
         self.scan = False
         self.snapshot = False   # 跌倒自動截圖
         self.lock = threading.Lock()
@@ -792,6 +793,7 @@ def process_frame(state, cfg, frames, align, pc, hands, pose, ts):
         c_face_enroll = cfg.face_enroll; cfg.face_enroll = None
         c_face_delete = cfg.face_delete; cfg.face_delete = None
         c_face_clear = cfg.face_clear; cfg.face_clear = False
+        c_face_rename = cfg.face_rename; cfg.face_rename = None
         do_scan = cfg.scan
         cfg.scan = False
         do_snapshot = cfg.snapshot
@@ -879,6 +881,8 @@ def process_frame(state, cfg, frames, align, pc, hands, pose, ts):
         fu.DB.clear(); status["msg"] = "已清除所有人臉資料"
     if c_face_delete:
         fu.DB.delete(c_face_delete); status["msg"] = f"已刪除「{c_face_delete}」的人臉資料"
+    if c_face_rename:
+        ok, msg = fu.DB.rename(c_face_rename[0], c_face_rename[1]); status["msg"] = msg
     faces_out = []
     fu.DB.set_engine(c_face_engine)                       # 切換引擎(內部改變才重載)
     fu.DB.thr_lbph, fu.DB.thr_arc = c_face_thr, c_face_sim
@@ -1324,6 +1328,17 @@ def make_api(state):
     def face_clear():
         with state.cfg.lock:
             state.cfg.face_clear = True
+        return {"ok": True}
+
+    @api.post("/face/rename")
+    async def face_rename(req: Request):
+        d = await req.json()
+        old = (d.get("old") or "").strip()
+        new = (d.get("new") or "").strip()
+        if not old or not new:
+            return {"ok": False, "msg": "需要舊名與新名"}
+        with state.cfg.lock:
+            state.cfg.face_rename = (old, new)
         return {"ok": True}
 
     @api.post("/action/fall_snapshot")

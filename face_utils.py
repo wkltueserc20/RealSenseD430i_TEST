@@ -300,6 +300,37 @@ class FaceDB:
         self.reload()
         return True, f"已擷取「{name}」第 {len(self._files(fid))} 張樣本"
 
+    def rename(self, old, new):
+        """改某人的名字(保留所有樣本)。新名字已存在 → 把樣本併入該人。
+        回傳 (ok, 訊息)。"""
+        old = (old or "").strip(); new = (new or "").strip()
+        if not new:
+            return False, "新名字不能空白"
+        fid = next((i for i, n in self.names.items() if n == old), None)
+        if fid is None:
+            return False, f"找不到「{old}」"
+        if new == old:
+            return True, "名字未變更"
+        tgt = next((i for i, n in self.names.items() if n == new and i != fid), None)
+        if tgt is None:                      # 單純改名
+            self.names[fid] = new
+            self._save_names(); self.reload()
+            return True, f"已改名為「{new}」"
+        # 併入既有同名者：把樣本搬到 tgt，刪掉原 id
+        base = len(self._files(tgt))
+        dst = self._dir(tgt); os.makedirs(dst, exist_ok=True)
+        for k, p in enumerate(self._files(fid)):
+            img = self._imread(p)
+            if img is not None:
+                self._imwrite(os.path.join(dst, f"{base + k:03d}.png"), img)
+            try: os.remove(p)
+            except Exception: pass
+        try: os.rmdir(self._dir(fid))
+        except Exception: pass
+        self.names.pop(fid, None)
+        self._save_names(); self.reload()
+        return True, f"已併入「{new}」"
+
     def delete(self, name):
         fid = next((i for i, n in self.names.items() if n == name), None)
         if fid is None:

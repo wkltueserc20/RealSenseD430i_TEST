@@ -161,6 +161,9 @@
                  S.msg=`已擷取「${n}」第 ${S.faces[n]} 張樣本（DEMO）`; } }
         else if(path==="/face/delete"){ delete S.faces[(b.name||"").trim()]; }
         else if(path==="/face/clear"){ S.faces={}; }
+        else if(path==="/face/rename"){ const o=(b.old||"").trim(), n=(b.new||"").trim();
+          if(o&&n&&S.faces[o]!=null){ S.faces[n]=(S.faces[n]||0)+S.faces[o]; delete S.faces[o];
+            S.msg=`已改名為「${n}」（DEMO）`; } }
         return Promise.resolve(jsonResp({ok:true}));
       }
       return Promise.resolve(jsonResp({ok:true}));

@@ -210,6 +210,9 @@ input[type=range]::-moz-range-thumb{width:15px;height:15px;border:0;border-radiu
   color:var(--bone)}
 .frow input:focus{outline:none; border-color:var(--signal)}
 .frow .btn{flex:none; white-space:nowrap}
+.frename{flex:1; min-width:0; font:13px "Noto Sans TC",sans-serif; padding:2px 7px;
+  border:1px solid var(--signal); border-radius:6px; background:transparent; color:var(--bone)}
+.frename:focus{outline:none}
 
 /* ── footer ticker ── */
 .ticker{margin-top:26px; border:1px solid var(--line); border-radius:99px; padding:10px 18px;
@@ -1359,6 +1362,7 @@ function faceUpdate(s){
     else { stat.className="verdict idle"; vv.textContent="目前辨識：（無人臉）"; }
   }
   const el=$("#face_list"); if(!el) return;
+  if(faceEditing) return;                          // 正在改名 → 別重繪清單
   const db=s.faces_db||[];
   const sig=db.map(p=>p.name+":"+p.samples).join("|");
   if(el._sig===sig) return; el._sig=sig;          // 內容沒變就不重繪(避免點擊被打斷)
@@ -1367,12 +1371,34 @@ function faceUpdate(s){
   db.forEach(p=>{
     const row=document.createElement("div"); row.className="oitem";
     const dot=document.createElement("span"); dot.className="ohit"; dot.style.background="#7aa2ff";
-    const nm=document.createElement("span"); nm.textContent=p.name;
+    const nm=document.createElement("span"); nm.textContent=p.name; nm.style.flex="1";
     const cnt=document.createElement("span"); cnt.className="od"; cnt.textContent=p.samples+" 張";
+    const ed=document.createElement("span"); ed.className="ox"; ed.title="改名"; ed.textContent="✎";
+    ed.style.color="#7aa2ff";
+    ed.addEventListener("click",()=>startFaceRename(nm, p.name));
     const x=document.createElement("span"); x.className="ox"; x.title="刪除"; x.textContent="✕";
     x.addEventListener("click",()=>{ post("/face/delete",{name:p.name}); el._sig=null; });
-    row.append(dot,nm,cnt,x); el.appendChild(row);
+    row.append(dot,nm,cnt,ed,x); el.appendChild(row);
   });
+}
+let faceEditing=false;
+function startFaceRename(nmSpan, oldName){       // 行內改名(保留樣本，不必刪除重建)
+  faceEditing=true;
+  const inp=document.createElement("input"); inp.className="frename";
+  inp.value=oldName; inp.maxLength=16;
+  nmSpan.replaceWith(inp); inp.focus(); inp.select();
+  let done=false;
+  const finish=commit=>{
+    if(done) return; done=true; faceEditing=false;
+    const v=inp.value.trim();
+    if(commit && v && v!==oldName){ post("/face/rename",{old:oldName, new:v}); }
+    const el=$("#face_list"); if(el) el._sig=null;   // 強制下次重繪(顯示新名字)
+  };
+  inp.addEventListener("keydown",e=>{
+    if(e.key==="Enter"){ e.preventDefault(); finish(true); }
+    else if(e.key==="Escape"){ e.preventDefault(); finish(false); }
+  });
+  inp.addEventListener("blur",()=>finish(true));   // 點到別處＝確認
 }
 function doEnroll(){
   const inp=$("#face_name"), name=inp.value.trim();
