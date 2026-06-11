@@ -1,15 +1,15 @@
 /* ============================================================
  * demo.js — PAGE 模擬模式(無實體相機 / 無後端)
  *
- * 重新規劃：每個功能畫「它該有的主角」+ 放慢 + 把結果標清楚 + 底部字幕。
- *   📐 量測  → 桌上箱子，掃描後標長寬高/距離
- *   📦 品檢  → 零件 + 參考框，輪流演 OK / NG
- *   🙂 人臉  → 置中臉孔，輪流換人 → 標名字 / 未知
- *   🚧 障礙  → 固定範圍 + 物體滑入 → 進入即紅+警報
- *   👁 監看  → 人 + 骨架 + 手勢(這裡動才合理)
- *   🌈 深度  → 彩色深度(近紅遠藍)
- * 仍是「假相機畫面 + 假後端」→ 右側真實 UI 面板照常連動。
- * 自動導覽：閒置時輪播(點真 UI 模式鈕);操作即暫停。直接示範 + 字幕,無標題卡。
+ * 真實照片當背景 + canvas 疊偵測圖形,看起來像真的相機在偵測。
+ *   📐 量測 → 物體照片 + 包圍盒 + 尺寸
+ *   📦 品檢 → 零件照片 + 參考框 + OK/NG
+ *   🙂 人臉 → 4 張真人輪播 + 名字框(含「未知」)
+ *   🚧 障礙 → 走廊照片(遠=安全 / 近=警報)+ 範圍框
+ *   👁 監看 → 站姿照片 + 骨架 / 手勢照片 + 手勢框
+ *   🌈 深度 → 彩色深度(用畫的)
+ * 仍是假相機+假後端 → 右側真實 UI 面板照常連動。
+ * 自動導覽:閒置輪播(點真 UI 模式鈕);操作即暫停。
  *
  * 啟用：*.github.io、file://、或 ?demo=1；本機有後端 ?demo=0 關閉。
  * ============================================================ */
@@ -24,208 +24,148 @@
   const cv = document.createElement("canvas"); cv.width = cv.height = W;
   const g = cv.getContext("2d");
   const now = () => performance.now();
-  const S = { cfg:{}, regions:[], faces:{"小明":6, "Aki":5}, msg:"", t:0 };
+  const S = { cfg:{}, regions:[], faces:{"小明":7,"Aki":6,"David":5}, msg:"", t:0 };
 
-  const LOOKS = [
-    {skin:"#e7b48b", hair:"#2f2018", shirt:"#3f6fb0", style:"short"},
-    {skin:"#caa06e", hair:"#141414", shirt:"#b04f7a", style:"bun"},
-    {skin:"#f1cba2", hair:"#6b4a28", shirt:"#3fae84", style:"long"},
-    {skin:"#a87a55", hair:"#101010", shirt:"#c0843c", style:"cap"},
-  ];
-  // 真人示範頭像(同源圖片 → canvas 不會被污染);路徑相對於 web/index.html
-  const PHOTOS = [["小明","demo/face1.png"],["Aki","demo/face2.png"]].map(([name,src])=>{
-    const im=new Image(); im.src=src; return {name, im}; });
-  function facePick(){
-    const p=PHOTOS[Math.floor(S.t/5)%PHOTOS.length], matching=(S.t%5)<1.2;
-    const sz=W*0.5, x=(W-sz)/2, y=W*0.15;
-    const box=[Math.round(x+sz*0.22),Math.round(y+sz*0.1),Math.round(sz*0.56),Math.round(sz*0.72)];
-    return {p, matching, sim:+(0.68+0.06*Math.sin(S.t*2)).toFixed(2), box, x, y, sz};
-  }
-  const shade=(hex,a)=>{ const n=parseInt(hex.slice(1),16);
-    const r=Math.max(0,Math.min(255,(n>>16)+a)), gc=Math.max(0,Math.min(255,((n>>8)&255)+a)),
-          b=Math.max(0,Math.min(255,(n&255)+a)); return `rgb(${r},${gc},${b})`; };
+  const L = src => { const i=new Image(); i.src=src; return i; };
+  // 每張照片附「主體在照片內的相對框 [fx0,fy0,fx1,fy1]」→ 疊圖才對得準
+  const IMG = {
+    faces:[
+      {im:L("demo/face1.png"), name:"小明", box:[0.27,0.10,0.73,0.66]},
+      {im:L("demo/face2.png"), name:"Aki",  box:[0.28,0.06,0.74,0.80]},
+      {im:L("demo/face3.png"), name:"David",box:[0.22,0.10,0.78,0.66]},
+      {im:L("demo/face4.png"), name:"未知", box:[0.22,0.10,0.80,0.66], unknown:true},
+    ],
+    measure:[
+      {im:L("demo/m_box.png"),    box:[0.13,0.22,0.88,0.82], dims:[24.3,18.0,16.1]},
+      {im:L("demo/m_bottle.png"), box:[0.40,0.07,0.60,0.90], dims:[6.5,6.5,21.5]},
+      {im:L("demo/m_mug.png"),    box:[0.20,0.30,0.63,0.83], dims:[9.6,8.2,9.8]},
+    ],
+    inspect:[
+      {im:L("demo/i_pcb.png"),  box:[0.09,0.10,0.93,0.92]},
+      {im:L("demo/i_part.png"), box:[0.27,0.27,0.73,0.80]},
+    ],
+    obstacle:[
+      {im:L("demo/o_safe.png"),  person:[0.46,0.44,0.54,0.64], near:false},
+      {im:L("demo/o_alert.png"), person:[0.24,0.05,0.79,0.98], near:true},
+    ],
+    pose:[
+      {im:L("demo/s_stand.png"), kp:{head:[.50,.10],neck:[.50,.17],ls:[.40,.21],rs:[.60,.21],
+        le:[.35,.34],re:[.65,.34],lw:[.33,.46],rw:[.67,.46],hc:[.50,.52],lh:[.44,.52],rh:[.56,.52],
+        lk:[.45,.72],rk:[.55,.72],la:[.46,.95],ra:[.54,.95]}},
+      {im:L("demo/s_gesture.png"), hand:[0.10,0.26,0.32,0.58], gesture:true},
+    ],
+  };
+
   const jet = t => { t=Math.max(0,Math.min(1,t));
-    const r=Math.max(0,Math.min(1,1.5-Math.abs(4*t-3))), gg=Math.max(0,Math.min(1,1.5-Math.abs(4*t-2))),
+    const r=Math.max(0,Math.min(1,1.5-Math.abs(4*t-3))),gg=Math.max(0,Math.min(1,1.5-Math.abs(4*t-2))),
           b=Math.max(0,Math.min(1,1.5-Math.abs(4*t-1))); return `rgb(${r*255|0},${gg*255|0},${b*255|0})`; };
   const line=(a,b,c,d)=>{ g.beginPath(); g.moveTo(a,b); g.lineTo(c,d); g.stroke(); };
-  const pointIn=(poly,x,y)=>{ let ins=false; for(let i=0,j=poly.length-1;i<poly.length;j=i++){
-    const xi=poly[i][0],yi=poly[i][1],xj=poly[j][0],yj=poly[j][1];
-    if(((yi>y)!==(yj>y))&&(x<(xj-xi)*(y-yi)/((yj-yi)||1e-6)+xi)) ins=!ins;} return ins; };
-
-  // ---------- 共用背景 ----------
-  function roomBg(){
-    const bg=g.createLinearGradient(0,0,0,W);
-    bg.addColorStop(0,"#1a232e"); bg.addColorStop(0.74,"#10161d"); bg.addColorStop(1,"#0c1014");
-    g.fillStyle=bg; g.fillRect(0,0,W,W);
-    g.strokeStyle="rgba(120,160,210,0.06)"; g.lineWidth=1;
-    for(let x=0;x<W;x+=50) line(x,0,x,W);
-    for(let y=0;y<W;y+=50) line(0,y,W,y);
-    const fl=g.createLinearGradient(0,W*0.72,0,W);
-    fl.addColorStop(0,"#26323f"); fl.addColorStop(1,"#141b22");
-    g.fillStyle=fl; g.fillRect(0,W*0.72,W,W*0.28);
+  const pick = list => list[Math.floor(S.t/5)%list.length];
+  function drawPhoto(im){
+    g.fillStyle="#0c1014"; g.fillRect(0,0,W,W);
+    if(!im.complete||!im.naturalWidth) return {x:0,y:0,w:W,h:W};
+    const ar=im.naturalWidth/im.naturalHeight; let w=W,h=W/ar; if(h>W){h=W;w=W*ar;}
+    const x=(W-w)/2,y=(W-h)/2; g.drawImage(im,x,y,w,h); return {x,y,w,h};
   }
-  function tag(x,y,text,col,big){       // 標註小牌
+  const fr=(r,a,b,c,d)=>[r.x+a*r.w, r.y+b*r.h, (c-a)*r.w, (d-b)*r.h];
+  function tag(x,y,text,col,big){
     g.font=(big?"700 22px":"600 16px")+" 'Noto Sans TC',sans-serif";
     const w=g.measureText(text).width+18;
-    g.fillStyle="rgba(8,12,18,0.8)"; g.fillRect(x,y-22,w,28);
-    g.fillStyle=col; g.fillText(text,x+9,y);
-  }
-
-  // ---------- 人物(上色臉孔) ----------
-  function fig(cx,cy,R,sw){ return {cx,cy,R, headY:cy-R*1.88, neckY:cy-R*1.0, shoY:cy-R*0.47,
-    sh:R*1.3, hipY:cy+R*1.4, feetY:cy+R*3.5, swing:sw}; }
-  const headBox = f => [Math.round(f.cx-f.R), Math.round(f.headY-f.R*1.15),
-                        Math.round(f.R*2), Math.round(f.R*2.3)];
-  function avatar(f, look, depth){
-    const cx=f.cx, hy=f.headY, R=f.R;
-    g.fillStyle = depth ? jet(0.8) : look.shirt;
-    g.beginPath(); g.moveTo(cx-R*1.7,f.feetY); g.quadraticCurveTo(cx-R*1.85,hy+R*1.5,cx-R*0.75,hy+R*1.15);
-    g.lineTo(cx+R*0.75,hy+R*1.15); g.quadraticCurveTo(cx+R*1.85,hy+R*1.5,cx+R*1.7,f.feetY); g.closePath(); g.fill();
-    g.fillStyle = depth ? jet(0.83) : shade(look.skin,-22); g.fillRect(cx-R*0.33,hy+R*0.55,R*0.66,R*0.7);
-    if(depth){ g.fillStyle=jet(0.9); g.beginPath(); g.ellipse(cx,hy,R*0.95,R*1.12,0,0,7); g.fill(); return; }
-    g.fillStyle=shade(look.skin,-12);
-    g.beginPath(); g.ellipse(cx-R*0.92,hy+R*0.05,R*0.17,R*0.27,0,0,7); g.fill();
-    g.beginPath(); g.ellipse(cx+R*0.92,hy+R*0.05,R*0.17,R*0.27,0,0,7); g.fill();
-    const grd=g.createRadialGradient(cx-R*0.3,hy-R*0.35,R*0.2,cx,hy,R*1.25);
-    grd.addColorStop(0,shade(look.skin,22)); grd.addColorStop(1,shade(look.skin,-22));
-    g.fillStyle=grd; g.beginPath(); g.ellipse(cx,hy,R*0.92,R*1.1,0,0,7); g.fill();
-    const eo=R*0.4, ey=hy-R*0.05, ew=R*0.19, eh=R*0.12, blink=(S.t%3.2)<0.13;
-    g.strokeStyle=look.hair; g.lineWidth=R*0.08; g.lineCap="round";
-    line(cx-eo-ew*0.7,hy-R*0.32,cx-eo+ew*0.7,hy-R*0.37); line(cx+eo-ew*0.7,hy-R*0.37,cx+eo+ew*0.7,hy-R*0.32);
-    for(const sx of [-1,1]){ const ex=cx+sx*eo;
-      if(blink){ g.strokeStyle="#5a4636"; g.lineWidth=R*0.05; line(ex-ew,ey,ex+ew,ey); }
-      else{ g.fillStyle="#fff"; g.beginPath(); g.ellipse(ex,ey,ew,eh,0,0,7); g.fill();
-        g.fillStyle="#3a2a1a"; g.beginPath(); g.arc(ex+sx*R*0.02,ey,eh*0.72,0,7); g.fill();
-        g.fillStyle="#000"; g.beginPath(); g.arc(ex+sx*R*0.02,ey,eh*0.34,0,7); g.fill(); } }
-    g.strokeStyle=shade(look.skin,-32); g.lineWidth=R*0.05;
-    g.beginPath(); g.moveTo(cx,hy-R*0.02); g.lineTo(cx-R*0.1,hy+R*0.26); g.quadraticCurveTo(cx,hy+R*0.34,cx+R*0.08,hy+R*0.26); g.stroke();
-    g.strokeStyle="#a4584a"; g.lineWidth=R*0.09; g.beginPath(); g.arc(cx,hy+R*0.42,R*0.34,0.16*Math.PI,0.84*Math.PI); g.stroke();
-    g.fillStyle=look.hair;
-    if(look.style==="cap"){ g.beginPath(); g.ellipse(cx,hy-R*0.45,R*1.0,R*0.65,0,Math.PI,2*Math.PI); g.fill(); g.fillRect(cx-R,hy-R*0.5,R*2,R*0.14); }
-    else{ g.beginPath(); g.ellipse(cx,hy-R*0.5,R*0.98,R*0.7,0,Math.PI,2*Math.PI); g.fill();
-      if(look.style==="long"){ g.fillRect(cx-R*0.98,hy-R*0.5,R*0.26,R*1.35); g.fillRect(cx+R*0.72,hy-R*0.5,R*0.26,R*1.35); }
-      if(look.style==="bun"){ g.beginPath(); g.arc(cx,hy-R*1.05,R*0.3,0,7); g.fill(); } }
-  }
-  function skeleton(f){
-    const J={head:[f.cx,f.headY],neck:[f.cx,f.neckY],ls:[f.cx-f.sh,f.shoY],rs:[f.cx+f.sh,f.shoY],
-      hip:[f.cx,f.hipY],lf:[f.cx-f.R*0.6,f.feetY],rf:[f.cx+f.R*0.6,f.feetY],
-      le:[f.cx-f.sh*1.15,f.shoY+f.R*1.0+f.swing*16], re:[f.cx+f.sh*1.15,f.shoY+f.R*1.0-f.swing*16]};
-    g.strokeStyle="#3df58a"; g.lineWidth=4; g.lineCap="round";
-    for(const[a,b] of [["head","neck"],["neck","ls"],["neck","rs"],["ls","le"],["rs","re"],["neck","hip"],["hip","lf"],["hip","rf"]])
-      line(J[a][0],J[a][1],J[b][0],J[b][1]);
-    g.fillStyle="#ff4e6a"; for(const k in J){ g.beginPath(); g.arc(J[k][0],J[k][1],5,0,7); g.fill(); }
+    g.fillStyle="rgba(8,12,18,0.82)"; g.fillRect(x,y-23,w,29);
+    g.fillStyle=col; g.fillText(text,x+9,y-3);
   }
 
   // ---------- 合成數值(畫面與 /status 共用) ----------
-  const distNow = () => +(0.55+0.07*Math.sin(S.t*0.8)).toFixed(2);
-  const measureVals = () => ({ length:0.243, width:0.161, height:0.098, tilt:3, dist:distNow(), n_pts:2100 });
+  const distNow = () => +(0.55+0.06*Math.sin(S.t*0.8)).toFixed(2);
+  const curMeasure = () => pick(IMG.measure);
+  const measureVals = () => { const d=curMeasure().dims;
+    return { length:d[0]/100, width:d[2]/100, height:d[1]/100, tilt:2, dist:distNow(), n_pts:2100 }; };
   const inspectOK = () => Math.floor(S.t/4.5)%2===0;
-  function inspectVals(){ const ok=inspectOK();
-    return { verdict:ok?"OK":"NG", ng:!ok, score: ok?Math.round(94+3*Math.sin(S.t*3)):Math.round(46+5*Math.sin(S.t*3)),
-      skew: ok?2:13, oob:!ok, reason:"" }; }
-  function gestureNow(){ const seq=[["PALM",5],["FIST",0],["ONE",1],["TWO",2],["OK",3]];
-    const s=seq[Math.floor(S.t*0.5)%seq.length]; return {g:s[0], n:s[1]}; }
-  const OZONE=[[W*0.30,W*0.16],[W*0.72,W*0.16],[W*0.72,W*0.60],[W*0.30,W*0.60]];
-  function obstacleSim(){ const objX=W*0.5+Math.sin(S.t*0.55)*W*0.34, objY=W*0.38;
-    const inZone=pointIn(OZONE,objX,objY); return {objX,objY,inZone,dist:inZone?0.6:2.4,r:W*0.06}; }
+  const inspectVals = () => { const ok=inspectOK();
+    return { verdict:ok?"OK":"NG", ng:!ok, score: ok?Math.round(95+2*Math.sin(S.t*3)):Math.round(48+5*Math.sin(S.t*3)), skew:ok?2:13, oob:!ok, reason:"" }; };
+  const faceMatching = () => (S.t%5)<1.0;
+  const curFace = () => pick(IMG.faces);
+  const faceSim = () => +(0.69+0.06*Math.sin(S.t*2)).toFixed(2);
+  const gestureNow = () => ({g:"張開手掌", n:5});
+  const curObst = () => pick(IMG.obstacle);
 
   // ---------- 場景 ----------
-  function box3d(x,y,w,h,d,col){
-    g.fillStyle=col; g.fillRect(x,y,w,h);
-    g.fillStyle=shade(col,28); g.beginPath(); g.moveTo(x,y); g.lineTo(x+d,y-d); g.lineTo(x+w+d,y-d); g.lineTo(x+w,y); g.closePath(); g.fill();
-    g.fillStyle=shade(col,-32); g.beginPath(); g.moveTo(x+w,y); g.lineTo(x+w+d,y-d); g.lineTo(x+w+d,y+h-d); g.lineTo(x+w,y+h); g.closePath(); g.fill();
-    g.strokeStyle="rgba(0,0,0,.25)"; g.lineWidth=1; g.strokeRect(x,y,w,h);
-  }
   function sceneMeasure(){
-    roomBg();
-    const x=W*0.34,y=W*0.46,w=W*0.26,h=W*0.2,d=W*0.07,m=measureVals();
-    box3d(x,y,w,h,d,"#c79a5e");
-    const mp=S.t%5, scanning=mp<1.8;
-    if(scanning){
-      const sy=y-d+(h+d)*(mp/1.8);
-      g.strokeStyle="#27e0ff"; g.lineWidth=3; line(x-10,sy,x+w+d+10,sy);
-      g.fillStyle="#27e0ff22"; g.fillRect(x-10,y-d,w+d+20,sy-(y-d));
-      return "📐 物體量測 · 掃描中… 用深度重建物體";
-    }
-    g.setLineDash([6,5]); g.strokeStyle="#36d399"; g.lineWidth=2; g.strokeRect(x-12,y-d-12,w+d+24,h+d+24); g.setLineDash([]);
-    g.strokeStyle="#9fe8c0"; g.lineWidth=1.5; g.fillStyle="#9fe8c0"; g.font="600 15px 'IBM Plex Mono',monospace";
-    line(x,y+h+22,x+w,y+h+22); g.fillText((m.width*100).toFixed(1)+" cm",x+w*0.3,y+h+40);     // 寬
-    line(x-22,y,x-22,y+h); g.save(); g.translate(x-30,y+h*0.6); g.rotate(-Math.PI/2); g.fillText((m.height*100).toFixed(1)+" cm",0,0); g.restore(); // 高
-    tag(x+w+d+8,y-d+18,(m.length*100).toFixed(1)+" cm 長",  "#9fe8c0");
-    tag(x, y-d-22, "距離 "+m.dist.toFixed(2)+" m", "#27e0ff");
-    return `📐 物體量測 · ${ (m.length*100).toFixed(0) }×${(m.width*100).toFixed(0)}×${(m.height*100).toFixed(0)} cm,距離 ${m.dist.toFixed(2)} m`;
+    const e=curMeasure(), r=drawPhoto(e.im), b=fr(r,e.box[0],e.box[1],e.box[2],e.box[3]);
+    const mp=S.t%5, scanning=mp<1.6;
+    if(scanning){ const sy=b[1]+b[3]*(mp/1.6);
+      g.strokeStyle="#27e0ff"; g.lineWidth=3; line(b[0]-8,sy,b[0]+b[2]+8,sy);
+      g.fillStyle="rgba(39,224,255,.14)"; g.fillRect(b[0]-8,b[1],b[2]+16,sy-b[1]);
+      return "📐 物體量測 · 掃描中… 用深度重建物體輪廓"; }
+    g.setLineDash([7,5]); g.strokeStyle="#36d399"; g.lineWidth=2.5; g.strokeRect(b[0],b[1],b[2],b[3]); g.setLineDash([]);
+    g.strokeStyle="#9fe8c0"; g.fillStyle="#9fe8c0"; g.lineWidth=1.5; g.font="600 15px 'IBM Plex Mono',monospace";
+    line(b[0],b[1]+b[3]+16,b[0]+b[2],b[1]+b[3]+16); g.fillText(e.dims[0].toFixed(1)+" cm",b[0]+b[2]*0.32,b[1]+b[3]+36);
+    line(b[0]+b[2]+16,b[1],b[0]+b[2]+16,b[1]+b[3]); g.save(); g.translate(b[0]+b[2]+34,b[1]+b[3]*0.55); g.rotate(-Math.PI/2); g.fillText(e.dims[1].toFixed(1)+" cm",0,0); g.restore();
+    tag(b[0], b[1]-6, "距離 "+distNow().toFixed(2)+" m", "#27e0ff");
+    return `📐 物體量測 · ${e.dims[0]}×${e.dims[2]}×${e.dims[1]} cm,距離 ${distNow().toFixed(2)} m`;
   }
   function sceneInspect(){
-    roomBg();
-    const ok=inspectOK(), v=inspectVals();
-    const cx=W*0.5, cy=W*0.46, s=W*0.26;
-    g.setLineDash([7,6]); g.lineWidth=2; g.strokeStyle="#88ffd0aa"; g.strokeRect(cx-s/2,cy-s/2,s,s); g.setLineDash([]); // 參考框
-    g.save(); g.translate(cx,cy);
-    if(!ok){ g.translate(W*0.04,W*0.02); g.rotate(0.18); }           // NG：移位+歪斜
-    g.fillStyle="#5b6b86"; g.fillRect(-s*0.34,-s*0.28,s*0.68,s*0.56);
-    g.fillStyle="#8fa3c2"; g.fillRect(-s*0.24,-s*0.18,s*0.3,s*0.16);
-    g.fillStyle="#c0d0e8"; g.fillRect(s*0.02,-s*0.05,s*0.18,s*0.2);
-    g.restore();
-    g.lineWidth=4; g.strokeStyle=ok?"#33dd66":"#ff5a48"; g.strokeRect(cx-s/2-6,cy-s/2-6,s+12,s+12);
-    tag(cx-s/2-6, cy-s/2-14, (ok?"✓ OK ":"✗ NG ")+v.score, ok?"#33dd66":"#ff7a6a", true);
-    return ok ? "📦 定位品檢 · 位置正確 → 合格(OK)"
-              : `📦 定位品檢 · 物體移位/歪斜 ${v.skew}° → 不合格(NG)`;
+    const e=curInspect(), r=drawPhoto(e.im), b=fr(r,e.box[0],e.box[1],e.box[2],e.box[3]);
+    const ok=inspectOK(), v=inspectVals(), sh=ok?0:b[2]*0.06;
+    g.setLineDash([7,6]); g.lineWidth=2; g.strokeStyle="#88ffd0aa"; g.strokeRect(b[0],b[1],b[2],b[3]); g.setLineDash([]);
+    g.lineWidth=4; g.strokeStyle=ok?"#33dd66":"#ff5a48"; g.strokeRect(b[0]-6+sh,b[1]-6+sh,b[2]+12,b[3]+12);
+    tag(b[0]-6, b[1]-12, (ok?"✓ OK ":"✗ NG ")+v.score, ok?"#33dd66":"#ff7a6a", true);
+    return ok?"📦 定位品檢 · 位置正確 → 合格(OK)":`📦 定位品檢 · 物體移位/歪斜 ${v.skew}° → 不合格(NG)`;
   }
+  const curInspect = () => pick(IMG.inspect);
   function sceneFace(){
-    roomBg();
-    const fp=facePick(), p=fp.p;
-    if(p.im.complete && p.im.naturalWidth) g.drawImage(p.im, fp.x, fp.y, fp.sz, fp.sz);
-    else { const f=fig(W*0.5,W*0.46,W*0.13,0); avatar(f,LOOKS[0],false); }   // 圖未載入 → 退回卡通
-    const col=fp.matching?"#ffd23c":"#33dd66";
-    g.lineWidth=3; g.strokeStyle=col; g.strokeRect(fp.box[0],fp.box[1],fp.box[2],fp.box[3]);
-    tag(fp.box[0], fp.box[1]-10, fp.matching?"比對中…":`${p.name}  ${fp.sim}`, col, true);
-    return fp.matching ? "🙂 人臉辨識 · 比對特徵中…"
-                       : `🙂 人臉辨識 · 認出「${p.name}」(相似度 ${fp.sim})`;
+    const e=curFace(), r=drawPhoto(e.im), b=fr(r,e.box[0],e.box[1],e.box[2],e.box[3]);
+    const matching=faceMatching(), known=!e.unknown && !matching;
+    const col=matching?"#ffd23c":(e.unknown?"#ffaa3c":"#33dd66");
+    g.lineWidth=3; g.strokeStyle=col; g.strokeRect(b[0],b[1],b[2],b[3]);
+    tag(b[0], b[1]-6, matching?"比對中…":(e.unknown?"未知":`${e.name}  ${faceSim()}`), col, true);
+    return matching?"🙂 人臉辨識 · 比對特徵中…":(e.unknown?"🙂 人臉辨識 · 陌生人 → 標記「未知」":`🙂 人臉辨識 · 認出「${e.name}」(相似度 ${faceSim()})`);
   }
   function sceneObstacle(){
-    roomBg();
-    const sim=obstacleSim();
-    g.fillStyle=sim.inZone?"rgba(255,90,72,.18)":"rgba(74,222,128,.12)";
-    g.beginPath(); g.moveTo(OZONE[0][0],OZONE[0][1]); OZONE.forEach(p=>g.lineTo(p[0],p[1])); g.closePath(); g.fill();
-    g.lineWidth=3; g.strokeStyle=sim.inZone?"#ff5a48":"#36d399"; g.stroke();
-    g.fillStyle=sim.inZone?"#ff8a7a":"#9fe8c0"; g.font="600 15px 'IBM Plex Mono',monospace";
-    g.fillText("檢測範圍", OZONE[0][0]+8, OZONE[0][1]+22);
-    g.fillStyle="#d8a55a"; g.beginPath(); g.arc(sim.objX,sim.objY,sim.r,0,7); g.fill();   // 物體
-    g.fillStyle="#7a5a2a"; g.beginPath(); g.arc(sim.objX-sim.r*0.3,sim.objY-sim.r*0.3,sim.r*0.5,0,7); g.fill();
-    if(sim.inZone) tag(sim.objX-30, sim.objY-sim.r-10, "⚠ "+sim.dist.toFixed(2)+" m", "#ff7a6a", true);
-    return sim.inZone ? `🚧 障礙物檢測 · 物體進入範圍!距離 ${sim.dist.toFixed(2)} m → 警報`
-                      : "🚧 障礙物檢測 · 範圍內無障礙 · 安全";
+    const e=curObst(), r=drawPhoto(e.im);
+    const zone=[r.x+r.w*0.18, r.y+r.h*0.40, r.w*0.64, r.h*0.58];   // 偵測範圍(畫面下半中央)
+    g.fillStyle=e.near?"rgba(255,90,72,.20)":"rgba(74,222,128,.14)";
+    g.fillRect(zone[0],zone[1],zone[2],zone[3]);
+    g.lineWidth=3; g.strokeStyle=e.near?"#ff5a48":"#36d399"; g.strokeRect(zone[0],zone[1],zone[2],zone[3]);
+    g.fillStyle=e.near?"#ff8a7a":"#9fe8c0"; g.font="600 15px 'IBM Plex Mono',monospace"; g.fillText("檢測範圍",zone[0]+8,zone[1]+22);
+    const p=fr(r,e.person[0],e.person[1],e.person[2],e.person[3]);
+    g.lineWidth=3; g.strokeStyle=e.near?"#ff5a48":"#ffd23c"; g.strokeRect(p[0],p[1],p[2],p[3]);
+    if(e.near) tag(p[0], p[1]-6, "⚠ 障礙 0.6 m", "#ff7a6a", true);
+    return e.near?"🚧 障礙物檢測 · 物體進入範圍!0.6 m → 警報":"🚧 障礙物檢測 · 範圍內無障礙 · 安全";
   }
   function scenePose(depth){
-    if(depth) depthBg(); else roomBg();
-    const f=fig(W*0.5+Math.sin(S.t*0.5)*W*0.14, W*0.46, W*0.1, Math.sin(S.t*2.6));
-    avatar(f, LOOKS[0], depth);
-    if(!depth){ skeleton(f); const s=gestureNow();
-      tag(20,40,"✋ 手勢:"+s.g+"  "+s.n+"指","#ff7a1a");
-      return "👁 監看 · 人體骨架追蹤 + 手勢辨識（跌倒也會警報）"; }
-    return "🌈 深度圖 · 近紅遠藍,越凸越近(可做活體/距離)";
+    const e=IMG.pose[depth?0:Math.floor(S.t/5)%IMG.pose.length];
+    if(depth){ depthBg(); return "🌈 深度圖 · 近紅遠藍,越凸越近(可做活體/距離)"; }
+    const r=drawPhoto(e.im);
+    if(e.gesture){ const h=fr(r,e.hand[0],e.hand[1],e.hand[2],e.hand[3]);
+      g.lineWidth=3; g.strokeStyle="#ff7a1a"; g.strokeRect(h[0],h[1],h[2],h[3]);
+      const s=gestureNow(); tag(h[0],h[1]-6,"✋ "+s.g+" · "+s.n+"指","#ff9a3c",true);
+      return "👁 監看 · 手勢辨識(可控制機器人)"; }
+    const P={}; for(const k in e.kp){ P[k]=[r.x+e.kp[k][0]*r.w, r.y+e.kp[k][1]*r.h]; }
+    g.strokeStyle="#3df58a"; g.lineWidth=4; g.lineCap="round";
+    for(const[a,b] of [["head","neck"],["neck","ls"],["neck","rs"],["ls","le"],["le","lw"],["rs","re"],["re","rw"],
+      ["neck","hc"],["hc","lh"],["hc","rh"],["lh","lk"],["lk","la"],["rh","rk"],["rk","ra"]]) line(P[a][0],P[a][1],P[b][0],P[b][1]);
+    g.fillStyle="#ff4e6a"; for(const k in P){ g.beginPath(); g.arc(P[k][0],P[k][1],5,0,7); g.fill(); }
+    return "👁 監看 · 即時人體骨架追蹤(跌倒會警報)";
   }
-  function depthBg(){ for(let y=0;y<W;y+=6){ g.fillStyle=jet(0.12+0.55*(y/W)); g.fillRect(0,y,W,6); } }
-  function sceneIdle(){ roomBg();
-    const f=fig(W*0.5, W*0.5, W*0.1, 0); avatar(f, LOOKS[0], false);
-    return "← 點右側功能來體驗,或靜置看自動導覽";
-  }
+  function depthBg(){ for(let y=0;y<W;y+=6){ g.fillStyle=jet(0.12+0.55*(y/W)); g.fillRect(0,y,W,6); }
+    const cx=W*0.5,hy=W*0.32,R=W*0.1;
+    g.fillStyle=jet(0.9); g.beginPath(); g.ellipse(cx,hy,R*0.95,R*1.1,0,0,7); g.fill();
+    g.fillStyle=jet(0.83); g.fillRect(cx-R*1.4,hy+R*1.2,R*2.8,R*2.6); }
+  function sceneIdle(){ g.fillStyle="#0e141b"; g.fillRect(0,0,W,W);
+    g.fillStyle="#9fb0c4"; g.font="600 22px 'Noto Sans TC',sans-serif"; g.textAlign="center";
+    g.fillText("← 點右側功能來體驗",W/2,W/2-10); g.fillText("或靜置看自動導覽",W/2,W/2+24); g.textAlign="left";
+    return ""; }
 
   // ---------- 字幕 / 角標 ----------
-  function captionBar(text){
-    if(!text) return;
-    g.fillStyle="rgba(8,11,16,0.72)"; g.fillRect(0,W-46,W,46);
+  function captionBar(text){ if(!text) return;
+    g.fillStyle="rgba(8,11,16,0.74)"; g.fillRect(0,W-46,W,46);
     g.fillStyle="#eaf1ff"; g.font="600 19px 'Noto Sans TC',sans-serif"; g.textBaseline="middle";
-    g.fillText(text, 18, W-23); g.textBaseline="alphabetic";
-  }
+    g.fillText(text,18,W-23); g.textBaseline="alphabetic"; }
   function topTags(){
-    g.fillStyle="rgba(255,210,150,0.92)"; g.font="600 18px 'Noto Sans TC',sans-serif";
-    g.fillText("◉ DEMO 模擬畫面 · 無實體相機", 16, 30);
-    if(touring()){ g.fillStyle="rgba(120,200,255,0.95)"; g.font="600 16px 'Noto Sans TC',sans-serif";
-      g.fillText("▶ 自動導覽中(操作即暫停)", 16, 52); }
-  }
+    g.fillStyle="rgba(255,210,150,0.92)"; g.font="600 18px 'Noto Sans TC',sans-serif"; g.fillText("◉ DEMO 模擬畫面 · 無實體相機",16,30);
+    if(touring()){ g.fillStyle="rgba(120,200,255,0.95)"; g.font="600 16px 'Noto Sans TC',sans-serif"; g.fillText("▶ 自動導覽中(操作即暫停)",16,52); } }
 
-  // ---------- 主繪製 ----------
   function render(){
     S.t+=0.016; const c=S.cfg; let cap;
     if(c.depth) cap=scenePose(true);
@@ -236,7 +176,7 @@
     else if(c.pose||c.hands) cap=scenePose(false);
     else cap=sceneIdle();
     topTags(); captionBar(cap);
-    feed.src=cv.toDataURL("image/jpeg",0.74);
+    feed.src=cv.toDataURL("image/jpeg",0.75);
     setTimeout(render,100);
   }
 
@@ -250,24 +190,21 @@
     if(c.measure) st.measure=measureVals();
     if(c.inspect) st.inspect=inspectVals();
     const names=Object.keys(S.faces); st.faces_db=names.map(n=>({name:n,samples:S.faces[n]}));
-    if(c.face){ const fp=facePick(); st.faces=[{name:fp.matching?"未知":fp.p.name, score:fp.matching?0.1:fp.sim, box:fp.box}]; } else st.faces=[];
+    if(c.face){ const e=curFace(), matching=faceMatching();
+      st.faces=[{name: matching?"未知":(e.unknown?"未知":e.name), score: matching||e.unknown?0.12:faceSim(), box:[0,0,0,0]}]; } else st.faces=[];
     st.face_engine=c.face_engine||"lbph"; st.arc_available=true;
     const thr=c.obstacle_dist||1.0;
-    if(c.obstacle){ if(S.regions.length){
-        let per=[],hit=false,mn=0; const fx=W*0.5+Math.sin(S.t*0.55)*W*0.34, fy=W*0.38;
-        S.regions.forEach(poly=>{ const ins=pointIn(poly,fx,fy), d=ins?0.6:2.6, h=d<=thr; per.push({hit:h,dist:d}); hit=hit||h; if(mn===0||d<mn)mn=d; });
-        st.obstacle={on:true,hit,dist:mn,thr,regions:S.regions,per};
-      } else { const sim=obstacleSim(); st.obstacle={on:true,hit:sim.inZone,dist:sim.dist,thr,regions:[],per:[]}; }
-    } else st.obstacle={on:false,hit:false,dist:0,thr,regions:S.regions,per:[]};
+    if(c.obstacle){ if(S.regions.length){ st.obstacle={on:true,hit:false,dist:2.5,thr,regions:S.regions,per:S.regions.map(()=>({hit:false,dist:2.5}))}; }
+      else { const e=curObst(); st.obstacle={on:true,hit:e.near,dist:e.near?0.6:2.4,thr,regions:[],per:[]}; } }
+    else st.obstacle={on:false,hit:false,dist:0,thr,regions:S.regions,per:[]};
     return st;
   }
   function evalResp(){ const nm=Object.keys(S.faces);
-    const intra=nm.map(n=>({name:n,n:Math.max(0,(S.faces[n]*(S.faces[n]-1))/2|0),min:0.55,mean:0.69,max:0.82}));
+    const intra=nm.map(n=>({name:n,n:Math.max(0,(S.faces[n]*(S.faces[n]-1))/2|0),min:0.55,mean:0.7,max:0.83}));
     const inter=[]; for(let i=0;i<nm.length;i++) for(let j=i+1;j<nm.length;j++) inter.push({a:nm[i],b:nm[j],mean:0.09,max:0.17});
     const sep=nm.length>=2?{intra_min:0.55,inter_max:0.17,gap:0.38,separable:true,suggested:0.35,acc:1.0}:null;
-    return {available:true,default_thr:0.35,people:nm.map(n=>({name:n,samples:S.faces[n]})),
-      intra,intra_all:nm.length?{n:1,min:0.55,mean:0.69,max:0.82}:null,inter,
-      inter_all:inter.length?{n:1,min:0.04,mean:0.09,max:0.17}:null,separation:sep}; }
+    return {available:true,default_thr:0.35,people:nm.map(n=>({name:n,samples:S.faces[n]})),intra,
+      intra_all:nm.length?{n:1,min:0.55,mean:0.7,max:0.83}:null,inter,inter_all:inter.length?{n:1,min:0.04,mean:0.09,max:0.17}:null,separation:sep}; }
 
   // ---------- 攔截 fetch ----------
   const realFetch = window.fetch ? window.fetch.bind(window) : null;
@@ -297,19 +234,17 @@
   let lastUser=now(), step=0;
   ["pointerdown","keydown","wheel","touchstart"].forEach(ev=>document.addEventListener(ev,()=>{lastUser=now();},{passive:true,capture:true}));
   const touring=()=>now()-lastUser>12000;
-  const clickMode=m=>{ const el=document.querySelector('.mode[data-mode="'+m+'"]'); if(el) el.click(); };
+  const clickMode=mm=>{ const el=document.querySelector('.mode[data-mode="'+mm+'"]'); if(el) el.click(); };
   const setDepth=w=>{ const sw=document.querySelector('.sw[data-k="depth"]'); if(sw&&sw.classList.contains("on")!==w) sw.click(); };
   const STEPS=[{mode:"measure",depth:false},{mode:"inspect",depth:false},{mode:"obstacle",depth:false},
                {mode:"face",depth:false},{mode:"watch",depth:false},{mode:"watch",depth:true}];
-  setInterval(()=>{ if(!touring()) return; const s=STEPS[step++%STEPS.length]; setDepth(s.depth); clickMode(s.mode); }, 8500);
+  setInterval(()=>{ if(!touring()) return; const s=STEPS[step++%STEPS.length]; setDepth(s.depth); clickMode(s.mode); }, 9000);
 
-  // ---------- 角標元素 ----------
   const badge=document.createElement("div");
   badge.textContent="● DEMO 模擬資料（無後端）";
-  badge.style.cssText="position:fixed;top:10px;left:50%;transform:translateX(-50%);z-index:400;"+
-    "font:600 12px 'Noto Sans TC',sans-serif;color:#140f08;background:#ff9a3c;padding:5px 14px;border-radius:999px;box-shadow:0 4px 16px #0006;letter-spacing:.04em";
+  badge.style.cssText="position:fixed;top:10px;left:50%;transform:translateX(-50%);z-index:400;font:600 12px 'Noto Sans TC',sans-serif;color:#140f08;background:#ff9a3c;padding:5px 14px;border-radius:999px;box-shadow:0 4px 16px #0006;letter-spacing:.04em";
   document.body.appendChild(badge);
 
   render();
-  console.log("[demo] 模擬模式：場景對應功能 + 字幕 + 自動導覽");
+  console.log("[demo] 真實照片 + 疊圖場景 + 自動導覽");
 })();
