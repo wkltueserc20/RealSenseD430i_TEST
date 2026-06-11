@@ -52,8 +52,8 @@ class Config:
         self.inspect_thr = 60.0 # NG 判定門檻分數
         self.pcloud = False     # 即時 3D 點雲(網頁檢視器開啟時才計算)
         self.obstacle = False   # 障礙物檢測開關
-        self.obstacle_box = None  # 檢測範圍 (x0,y0,x1,y1) 顯示座標；None=整個畫面
-        self.obstacle_dist = 1.0  # 觸發距離(公尺)；範圍內最近深度<=此值即警報
+        self.obstacle_regions = []  # 檢測範圍清單；每個=多邊形 [[x,y],...] 顯示座標；空=整個畫面
+        self.obstacle_dist = 1.0  # 觸發距離(公尺)；任一範圍最近深度<=此值即警報
         self.scan = False
         self.snapshot = False   # 跌倒自動截圖
         self.lock = threading.Lock()
@@ -588,22 +588,32 @@ def compute_obstacles(depth_frame, flip):
     return out
 
 
-def compute_obstacle_alert(depth_m_disp, box, thr):
-    """在框選範圍(顯示座標)內找最近有效深度；<=門檻視為偵測到障礙。
-    box=None → 以整個畫面為範圍。回傳 (hit, min_dist 公尺)。"""
+def compute_obstacle_alert(depth_m_disp, regions, thr):
+    """在多個框選範圍(顯示座標的多邊形)內找最近有效深度；任一範圍最近深度<=門檻即警報。
+    regions=空清單 → 以整個畫面為單一範圍。
+    回傳 (overall_hit, overall_min 公尺, per=[{hit, dist} 每個範圍])。"""
     h, w = depth_m_disp.shape
-    if box is None:
-        x0, y0, x1, y1 = 0, 0, w, h
-    else:
-        x0, y0, x1, y1 = (int(v) for v in box)
-        x0 = max(0, min(w - 1, x0)); x1 = max(x0 + 1, min(w, x1))
-        y0 = max(0, min(h - 1, y0)); y1 = max(y0 + 1, min(h, y1))
-    roi = depth_m_disp[y0:y1, x0:x1]
-    valid = roi[roi > 0.1]                 # 濾掉 0/過近雜訊
-    if valid.size == 0:
-        return False, 0.0
-    mn = float(valid.min())
-    return (mn <= thr), round(mn, 2)
+    polys = regions if regions else [[[0, 0], [w, 0], [w, h], [0, h]]]
+    per = []
+    o_hit, o_min = False, 0.0
+    for poly in polys:
+        pts = np.array(poly, dtype=np.int32)
+        if pts.shape[0] < 3:               # 點太少 → 無效範圍
+            per.append({"hit": False, "dist": 0.0})
+            continue
+        mask = np.zeros((h, w), np.uint8)
+        cv2.fillPoly(mask, [pts], 1)
+        vals = depth_m_disp[(mask > 0) & (depth_m_disp > 0.1)]  # 範圍內有效深度
+        if vals.size == 0:
+            per.append({"hit": False, "dist": 0.0})
+            continue
+        mn = round(float(vals.min()), 2)
+        hit = mn <= thr
+        per.append({"hit": hit, "dist": mn})
+        o_hit = o_hit or hit
+        if o_min == 0.0 or mn < o_min:
+            o_min = mn
+    return o_hit, o_min, per
 
 
 # IMU 用獨立管線在背景讀(與影像管線分開，避免互相干擾)
@@ -768,7 +778,7 @@ def process_frame(state, cfg, frames, align, pc, hands, pose, ts):
         c_iref = cfg.inspect_ref
         c_pcloud = cfg.pcloud
         c_obstacle = cfg.obstacle
-        c_obox, c_odist = cfg.obstacle_box, cfg.obstacle_dist
+        c_oregions, c_odist = list(cfg.obstacle_regions), cfg.obstacle_dist
         do_scan = cfg.scan
         cfg.scan = False
         do_snapshot = cfg.snapshot
@@ -834,7 +844,8 @@ def process_frame(state, cfg, frames, align, pc, hands, pose, ts):
     color = cv2.warpAffine(color, M_disp, (c_disp, c_disp),
                            flags=cv2.INTER_LINEAR)
 
-    # 障礙物檢測：在框選範圍(顯示座標)內找最近深度，<=門檻 → 警報並把範圍框畫在畫面上
+    # 障礙物檢測：在多個框選範圍(顯示座標)內找最近深度，任一<=門檻 → 警報。
+    # 範圍視覺由前端 canvas 疊圖負責繪製(座標同為顯示空間，與此處偵測一致)。
     if c_obstacle:
         od = np.asanyarray(depth_frame.get_data()).astype(np.float32)
         od *= depth_frame.get_units()           # 轉公尺
@@ -842,22 +853,13 @@ def process_frame(state, cfg, frames, align, pc, hands, pose, ts):
             od = cv2.flip(od, 1)
         od = cv2.warpAffine(od, M_disp, (c_disp, c_disp),
                             flags=cv2.INTER_NEAREST)  # 再套用顯示轉換 → 與框座標一致
-        o_hit, o_min = compute_obstacle_alert(od, c_obox, c_odist)
+        o_hit, o_min, o_per = compute_obstacle_alert(od, c_oregions, c_odist)
         status["obstacle"] = {"on": True, "hit": o_hit, "dist": o_min,
-                              "box": list(c_obox) if c_obox else None,
-                              "thr": c_odist}
-        bx = c_obox if c_obox else (0, 0, c_disp, c_disp)
-        x0, y0, x1, y1 = (int(v) for v in bx)
-        ocol = (0, 0, 255) if o_hit else (0, 200, 0)   # 紅=偵測到 綠=安全
-        cv2.rectangle(color, (x0, y0), (x1, y1), ocol, 2)
-        olabel = (f"! {o_min:.2f}m < {c_odist:.1f}m" if o_hit
-                  else f"OBSTACLE {c_odist:.1f}m")
-        cv2.putText(color, olabel, (x0 + 6, max(20, y0 + 22)),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, ocol, 2)
+                              "thr": c_odist, "regions": c_oregions,
+                              "per": o_per}
     else:
         status["obstacle"] = {"on": False, "hit": False, "dist": 0.0,
-                              "box": list(c_obox) if c_obox else None,
-                              "thr": c_odist}
+                              "thr": c_odist, "regions": c_oregions, "per": []}
 
     # 物體量測（點選 or 自動辨識 → 3D 點雲 + PCA OBB；水平校正後座標系）
     if c_measure:
@@ -1230,18 +1232,22 @@ def make_api(state):
             state.cfg.inspect_ref = None
         return {"ok": True}
 
-    @api.post("/obstacle/box")
-    async def obstacle_box(req: Request):
+    @api.post("/obstacle/regions")
+    async def obstacle_regions(req: Request):
         d = await req.json()
+        regions = []
+        for poly in (d.get("regions") or []):
+            pts = [[int(p[0]), int(p[1])] for p in poly if len(p) >= 2]
+            if len(pts) >= 3:              # 至少三點才算有效範圍
+                regions.append(pts)
         with state.cfg.lock:
-            state.cfg.obstacle_box = (int(d["x0"]), int(d["y0"]),
-                                      int(d["x1"]), int(d["y1"]))
-        return {"ok": True}
+            state.cfg.obstacle_regions = regions
+        return {"ok": True, "n": len(regions)}
 
     @api.post("/obstacle/clear")
     def obstacle_clear():
         with state.cfg.lock:
-            state.cfg.obstacle_box = None
+            state.cfg.obstacle_regions = []
         return {"ok": True}
 
     @api.post("/action/fall_snapshot")
