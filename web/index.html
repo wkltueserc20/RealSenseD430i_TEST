@@ -6,7 +6,7 @@
 <title>D435i · 光學深度量測台</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=IBM+Plex+Mono:wght@400;500;600&family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet" />
 <style>
 :root{
   --ink:#141009; --ink2:#1a160e; --panel:#201b12; --panel2:#28221688;
@@ -336,98 +336,156 @@ input[type=range]::-webkit-slider-thumb:hover{transform:scale(1.2); box-shadow:0
   *,*::before,*::after{animation-duration:.01ms !important; transition-duration:.01ms !important}
 }
 
-/* ════════ 亮色主題「瓷白精密儀器」— 整頁翻亮，螢幕區保留深色顯示屏 ════════ */
+/* ════════ 暗色科技主題「DEPTH-VISION HUD」— 深空黑藍 + 電光青，鏡頭即主角 ════════ */
 :root{
-  --ink:#f2eee3;          /* 頁面底：暖瓷白 */
-  --ink2:#fffdf6;
-  --panel:#fffdf6;        /* 卡片：紙白 */
-  --panel2:#fbf7eb;
-  --line:#ded5bd; --line2:#c8bb9d;
-  --bone:#231d10;         /* 主文字：墨色 */
-  --dim:#5d5440; --muted:#95896c;
-  --signal:#e8590c; --signal-d:#c2470a;   /* 國際橘 */
-  --mint:#157a4a; --mint-d:#0f5e39;        /* 亮底用深綠 */
-  --warn:#cf3527;
+  --ink:#060a11;          /* 頁面底：深空藍黑 */
+  --ink2:#0a111c;
+  --panel:#0e1726;        /* 卡片 */
+  --panel2:rgba(15,25,40,.72);
+  --line:#1b2c44; --line2:#2c456a;
+  --bone:#e4eefb;         /* 主文字：冷白 */
+  --dim:#9fb6d2; --muted:#5f7ba0;
+  --signal:#27d6f0; --signal-d:#12a3c4;   /* 電光青(深度感) */
+  --mint:#3ee6a4; --mint-d:#1aa874;        /* OK 綠 */
+  --warn:#ff5d6e;
+  --amber:#ffb24a;        /* 次要：LIVE 暖光 */
 }
 body{
   color:var(--bone);
   background:
-    radial-gradient(90% 55% at 50% -8%, #fffef9 0%, transparent 60%),
-    radial-gradient(70% 50% at 105% 108%, #f3e3c4 0%, transparent 55%),
-    radial-gradient(60% 45% at -8% 100%, #eef0e2 0%, transparent 50%),
+    radial-gradient(85% 55% at 50% -12%, #11314a 0%, transparent 60%),
+    radial-gradient(60% 55% at 102% 4%, #0d2740 0%, transparent 55%),
+    radial-gradient(65% 60% at -6% 102%, #0a2230 0%, transparent 55%),
     var(--ink);
 }
-body::before{content:""; position:fixed; top:0; left:0; right:0; height:4px; z-index:120;
-  background:linear-gradient(90deg,var(--signal-d),var(--signal) 40%,#ffb37a); pointer-events:none}
-.fx.grid{opacity:.045;
-  background-image:linear-gradient(#5d5440 1px,transparent 1px),
-                   linear-gradient(90deg,#5d5440 1px,transparent 1px)}
-.fx.vig{box-shadow:none}
-.fx.grain{opacity:.03; mix-blend-mode:multiply}
-::selection{background:#e8590c33; color:var(--bone)}
+/* 頂部電光掃描條 */
+body::before{content:""; position:fixed; top:0; left:0; right:0; height:2px; z-index:120;
+  background:linear-gradient(90deg,transparent,var(--signal) 30%,#bff6ff 50%,var(--signal) 70%,transparent);
+  box-shadow:0 0 14px var(--signal); pointer-events:none; opacity:.85}
+.fx.grid{opacity:.06;
+  background-image:linear-gradient(#27d6f022 1px,transparent 1px),
+                   linear-gradient(90deg,#27d6f022 1px,transparent 1px)}
+.fx.vig{box-shadow:inset 0 0 260px 60px #000c, inset 0 0 80px #0008}
+.fx.grain{opacity:.045; mix-blend-mode:overlay}
+::selection{background:#27d6f03a; color:#fff}
 
-header{border-bottom:2px solid #2c2517; padding-top:14px}
-.mark h1{letter-spacing:0}
+/* 科技顯示字（取代襯線數字）*/
+.mark h1,.metric .val,.verdict .vv,.slider .row b,.abadge{
+  font-family:"Chakra Petch","Noto Sans TC",sans-serif; font-weight:600; letter-spacing:.5px}
+.metric .val{font-size:38px} .verdict .vv{font-size:50px}
 
-/* 螢幕區 = 深色顯示屏(儀器窗) */
-.scope{background:#15120c; border:1px solid #2c2517;
-  box-shadow:0 14px 38px rgba(60,42,12,.22), 0 2px 6px rgba(60,42,12,.14)}
-.chip{background:#15120cd6; color:#cdc5b0; border-color:#ffffff24}
-.chip.live{color:#7ce4a9; border-color:#7ce4a955}
-.chip.warn{color:#ff9183; border-color:#ff918355}
-.xhchip{background:#15120ce6}
-.boxsel{background:#e8590c1f}
-.ph{color:#8d8470}
+/* 鏡頭視窗掃描線 + 深度網格(強調感測器) */
+.scope::before{content:""; position:absolute; inset:0; z-index:2; pointer-events:none;
+  background-image:linear-gradient(#27d6f014 1px,transparent 1px),linear-gradient(90deg,#27d6f014 1px,transparent 1px);
+  background-size:38px 38px;
+  -webkit-mask-image:radial-gradient(125% 125% at 50% 50%,#000 58%,transparent 100%);
+          mask-image:radial-gradient(125% 125% at 50% 50%,#000 58%,transparent 100%)}
+.scope::after{content:""; position:absolute; left:0; right:0; top:-30%; height:30%; z-index:3;
+  pointer-events:none; mix-blend-mode:screen;
+  background:linear-gradient(180deg,transparent,#27d6f01f 70%,#bff6ff44);
+  animation:scan 4.6s linear infinite}
+@keyframes scan{0%{top:-30%} 100%{top:100%}}
 
-/* 卡片：紙白 + 柔和層影 */
-.readout{background:linear-gradient(180deg,#fffdf6,#f8f2e2);
-  box-shadow:0 1px 2px rgba(60,46,16,.06), 0 12px 30px rgba(60,46,16,.08)}
-.readout::before{opacity:.12}
-.panel,.arena-wrap,.pc-wrap{background:var(--panel2);
-  box-shadow:0 1px 2px rgba(60,46,16,.05), 0 10px 26px rgba(60,46,16,.06)}
-.rhead .via{border-color:#157a4a44}
+header{border-bottom:1px solid var(--line); padding-top:14px; position:relative}
+header::after{content:""; position:absolute; left:0; bottom:-1px; height:1px; width:38%;
+  background:linear-gradient(90deg,var(--signal),transparent); box-shadow:0 0 10px var(--signal)}
+.mark h1{letter-spacing:.5px}
+.mark .sub{color:var(--signal); opacity:.8}
+.link{border:1px solid var(--line); border-radius:99px; padding:6px 13px; background:#0a131fcc}
+.link.on{border-color:#3ee6a455; box-shadow:0 0 16px #3ee6a41f}
+
+/* 鏡頭視窗 = 感測器主視窗(電光青框 + 外發光) */
+.scope{background:radial-gradient(120% 120% at 50% 30%,#0b1726,#05080e);
+  border:1px solid #1f3b55;
+  box-shadow:0 0 0 1px #27d6f01f, 0 24px 60px #000b, 0 0 60px #0b3a4d55,
+             inset 0 0 70px #00121c;}
+.scope img{filter:saturate(1.1) contrast(1.05)}
+/* 角框準星：青光 + 呼吸 */
+.bracket{border-color:var(--signal); opacity:.9; box-shadow:0 0 10px #27d6f088;
+  animation:hudpulse 3s ease-in-out infinite}
+@keyframes hudpulse{0%,100%{opacity:.9} 50%{opacity:.5}}
+.cross::before,.cross::after{background:var(--signal)}
+.ruler.top,.ruler.left{opacity:.4;
+  background-image:repeating-linear-gradient(90deg,#27d6f066 0 1px,transparent 1px 22px)}
+.ruler.left{background-image:repeating-linear-gradient(0deg,#27d6f066 0 1px,transparent 1px 22px)}
+.chip{background:#0a1622d9; color:var(--dim); border-color:#27d6f024; backdrop-filter:blur(4px)}
+.chip.live{color:var(--mint); border-color:#3ee6a455}
+.chip.warn{color:#ff9aa6; border-color:#ff5d6e66}
+.xhchip{background:#0a1622e6; color:var(--signal); border-color:#27d6f055}
+.xh{background:#27d6f066}
+.boxsel{border-color:var(--signal); background:#27d6f018}
+.ph{color:var(--muted);
+  background:repeating-linear-gradient(45deg,#070d15,#070d15 12px,#0a121d 12px,#0a121d 24px)}
+.hint{color:var(--muted)}
+
+/* 卡片：暗色玻璃 + 頂緣高光 */
+.readout{background:linear-gradient(180deg,#0f1c2e,#0a1320);
+  border-color:#1f3550; box-shadow:0 18px 40px #0008, inset 0 1px 0 #ffffff0a}
+.readout::before{background:radial-gradient(circle,var(--signal) 0,transparent 70%); opacity:.1}
+.panel,.arena-wrap,.pc-wrap{background:var(--panel2); backdrop-filter:blur(8px);
+  box-shadow:0 14px 34px #0007, inset 0 1px 0 #ffffff0a}
+.panel h2::before{background:var(--signal); box-shadow:0 0 8px var(--signal)}
+.rhead .via{border-color:#3ee6a455}
 
 /* 控制元件 */
-.btn{background:#fff; color:var(--dim); box-shadow:0 1px 2px rgba(60,46,16,.08)}
-.btn:hover{background:#e8590c10; color:var(--bone)}
-.sw{background:#ece4cf}
-.sw::after{background:#b3a787}
-.sw.on::after{background:#fff; box-shadow:0 1px 4px rgba(120,50,0,.4)}
-.mode{background:#fff; box-shadow:0 1px 2px rgba(60,46,16,.07)}
-.mode.on{background:var(--signal); color:#fff; border-color:var(--signal);
-  box-shadow:0 5px 16px #e8590c4d}
-.meter{background:#ece4cf}
-.meter .thr{background:var(--bone); box-shadow:0 0 4px #fff}
-.tg{border-bottom-color:#e7dfc9}
+.btn{background:#0c1826; color:var(--dim); box-shadow:inset 0 1px 0 #ffffff08}
+.btn:hover{background:#102a3a; color:var(--bone); border-color:var(--signal);
+  box-shadow:0 0 16px #27d6f01f, inset 0 0 10px #27d6f014}
+.btn.hot{border-color:var(--signal-d); color:var(--signal)}
+.sw{background:#0a1420}
+.sw::after{background:#3d5878}
+.sw.on{background:linear-gradient(90deg,var(--signal-d),var(--signal)); border-color:var(--signal);
+  box-shadow:0 0 14px #27d6f055}
+.sw.on::after{background:#04111a; box-shadow:0 0 8px #000a}
+.mode{background:#0b1622; box-shadow:inset 0 1px 0 #ffffff06}
+.mode:hover{border-color:var(--signal); color:var(--bone)}
+.mode.on{background:#27d6f016; color:var(--signal); border-color:var(--signal);
+  box-shadow:0 0 18px #27d6f02e, inset 0 0 14px #27d6f018}
+input[type=range]{background:linear-gradient(90deg,var(--signal) calc(var(--p,50)*1%),var(--line) 0)}
+input[type=range]::-webkit-slider-thumb{background:var(--signal); box-shadow:0 0 0 4px #27d6f02a, 0 0 10px #27d6f0}
+input[type=range]::-webkit-slider-thumb:hover{box-shadow:0 0 0 7px #27d6f033, 0 0 14px #27d6f0}
+.meter{background:#0a1420}
+.meter .fill{background:linear-gradient(90deg,var(--warn),var(--amber) 45%,var(--mint))}
+.meter .thr{background:var(--bone); box-shadow:0 0 6px #000}
+.tg{border-bottom-color:#16263a}
+.omode.on{background:var(--signal); color:#04111a}
+.frow input:focus,.frename{border-color:var(--signal)}
+.feval a{color:var(--signal)}
 
 /* 底部資訊列 / 通知 / 警報 */
-.ticker{background:#fffdf6; box-shadow:0 1px 2px rgba(60,46,16,.06), 0 8px 22px rgba(60,46,16,.06)}
-.toast{background:#fffdf6; color:var(--bone); border-color:#e8590c44;
-  border-left-color:var(--signal); box-shadow:0 12px 36px rgba(60,42,12,.25)}
-.fallmodal{background:rgba(58,34,16,.40)}
-.fbox{background:#fff6f2; border-color:var(--warn); box-shadow:0 0 70px #cf352766}
-.fbox .ftitle{color:#46150e}
-.fbox .fsub{color:#9a5e52}
-.fbtn{background:var(--signal); color:#fff}
+.ticker{background:#0a131fcc; backdrop-filter:blur(6px); box-shadow:0 10px 26px #0006}
+.ticker .it b{color:var(--bone)}
+.toast{background:#0c1826f2; color:var(--bone); border-color:#27d6f044;
+  border-left-color:var(--signal); box-shadow:0 14px 36px #000b}
+.fallmodal{background:#020509cc}
+.fbox{background:linear-gradient(180deg,#241016,#140a0e); border-color:var(--warn);
+  box-shadow:0 0 70px #ff5d6e55}
+.fbox .ftitle{color:#fff} .fbox .fsub{color:#ffc4ca}
+.fbtn{background:var(--signal); color:#04111a}
+.obox{background:linear-gradient(180deg,#241016,#140a0e)}
 
-/* 深色顯示屏的邊框統一 */
-#arena,#pc3d{border-color:#2c2517;
-  box-shadow:0 10px 26px rgba(60,42,12,.18), 0 2px 5px rgba(60,42,12,.12)}
+#arena,#pc3d{border-color:#1f3550; background:#05080e;
+  box-shadow:0 12px 28px #0008, inset 0 0 40px #00121c}
 .verdict.idle .vv{color:var(--muted)}
+.xhchip,.tline b{color:var(--signal)}
+/* 微互動：模式卡 hover 抬升 */
+.mode,.btn{transition:.18s cubic-bezier(.3,1,.4,1)}
+.panel:hover{border-color:#23405e}
 
-/* ── 公司品牌 ── */
+/* ── 公司品牌(深底用淺色徽板襯托 navy logo) ── */
 .brand{display:flex; align-items:center; margin-right:6px; padding-right:18px;
   border-right:1px solid var(--line); transition:opacity .2s, transform .2s}
-.brand .ctlogo{height:44px; aspect-ratio:2.5; display:block}
-.brand:hover{opacity:.8; transform:translateY(-1px)}
+.brand .ctlogo{height:40px; aspect-ratio:2.5; display:block; padding:4px 7px;
+  background:#e9f1fb; border-radius:7px; box-shadow:0 0 14px #27d6f01f}
+.brand:hover{opacity:.9; transform:translateY(-1px)}
 .credit{margin-top:26px; display:flex; justify-content:center; align-items:center;
   gap:12px; padding:16px 0 4px; border-top:1px solid var(--line);
   animation:rise .7s .42s both}
-.credit .ctlogo{height:28px; aspect-ratio:2.5; opacity:.92}
+.credit .ctlogo{height:26px; aspect-ratio:2.5; padding:3px 6px; background:#e9f1fb; border-radius:6px}
 .credit span{font-family:"IBM Plex Mono",monospace; font-size:10.5px;
   letter-spacing:.24em; color:var(--muted)}
-.credit b{color:#171c61; font-weight:600}
-@media(max-width:680px){.brand .ctlogo{height:32px}}
+.credit b{color:var(--signal); font-weight:600}
+@media(max-width:680px){.brand .ctlogo{height:30px}}
 </style>
 </head>
 <body>
