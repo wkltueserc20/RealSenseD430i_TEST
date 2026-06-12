@@ -654,6 +654,60 @@ header::after{background:linear-gradient(90deg,var(--signal),transparent); box-s
 .mark .dot{background:#ffffff; box-shadow:0 0 14px #ffffffd0}
 header::after{background:linear-gradient(90deg,#dcefff,transparent); box-shadow:0 0 10px #a9d4ff}
 .hint{color:rgba(255,255,255,.86)}
+
+/* 主題切換鈕 */
+.themebtn{margin-left:10px; font-family:"Chakra Petch","Noto Sans TC",sans-serif; font-size:12px;
+  padding:7px 13px; border-radius:99px; cursor:pointer; white-space:nowrap; letter-spacing:.03em;
+  background:rgba(255,255,255,.42); border:1px solid rgba(255,255,255,.6); color:var(--bone);
+  -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px); box-shadow:inset 0 1px 0 rgba(255,255,255,.9); transition:.2s}
+.themebtn:hover{background:rgba(255,255,255,.62); border-color:var(--signal); color:var(--signal)}
+
+/* ════════════════ DARK MODE 暗色模式 ════════════════ */
+body.theme-dark{
+  --bone:#e6eefc; --dim:#a6bcd9; --muted:#6f87a8;
+  --line:rgba(255,255,255,.14); --line2:rgba(255,255,255,.26);
+  --signal:#4385ff; --signal-d:#2257d8; --mint:#3ee6a4; --mint-d:#1aa874; --warn:#ff5d6e;
+  background:linear-gradient(150deg,#081325 0%,#0a1c40 38%,#0c2748 66%,#0e3450 100%);
+}
+body.theme-dark::before{background:linear-gradient(90deg,transparent,var(--signal) 30%,#bfe2ff 50%,var(--signal) 70%,transparent); box-shadow:0 0 14px var(--signal)}
+body.theme-dark .blob{mix-blend-mode:screen; opacity:.46}
+body.theme-dark .blob.b1{background:#2a52d6} body.theme-dark .blob.b2{background:#1f6fc8}
+body.theme-dark .blob.b3{background:#3aa0e0; opacity:.4} body.theme-dark .blob.b4{background:#2bc0e0; opacity:.36}
+body.theme-dark .fx.grid{opacity:.06; background-image:linear-gradient(#4385ff26 1px,transparent 1px),linear-gradient(90deg,#4385ff26 1px,transparent 1px)}
+body.theme-dark .fx.vig{box-shadow:inset 0 0 260px 60px #000c, inset 0 0 80px #0008}
+body.theme-dark .fx.grain{mix-blend-mode:overlay; opacity:.045}
+
+/* 暗玻璃面板 + 淺色字 */
+body.theme-dark .panel,body.theme-dark .readout,body.theme-dark .ticker,body.theme-dark .arena-wrap,body.theme-dark .pc-wrap,body.theme-dark .credit.promo{
+  background:linear-gradient(160deg, rgba(30,50,82,.5), rgba(10,20,38,.46));
+  border:1px solid rgba(255,255,255,.13); color:var(--bone);
+  box-shadow:0 20px 50px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.28), inset 0 0 28px rgba(255,255,255,.03)}
+body.theme-dark .panel::after,body.theme-dark .readout::after,body.theme-dark .credit.promo::after{background:linear-gradient(160deg, rgba(255,255,255,.14), transparent 32%)}
+body.theme-dark .panel:hover,body.theme-dark .readout:hover{border-color:rgba(255,255,255,.24); box-shadow:0 24px 56px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.4), 0 0 30px rgba(67,133,255,.18)}
+body.theme-dark .panel h2,body.theme-dark .ahead h2,body.theme-dark .rhead .k{color:var(--muted)}
+body.theme-dark .metric{border-bottom-color:rgba(255,255,255,.1)}
+body.theme-dark .metric .lab,body.theme-dark .slider .row label,body.theme-dark .tline,body.theme-dark .metric .val small,body.theme-dark .npts,body.theme-dark .ahint{color:var(--muted)}
+body.theme-dark .metric .val{color:var(--bone)}
+
+/* 控制元件 暗玻璃 */
+body.theme-dark .btn,body.theme-dark .mode,body.theme-dark .omode,body.theme-dark .frow input,body.theme-dark .frename,body.theme-dark .themebtn{
+  background:rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.15); color:var(--bone); box-shadow:inset 0 1px 0 rgba(255,255,255,.22)}
+body.theme-dark .btn:hover,body.theme-dark .mode:hover,body.theme-dark .themebtn:hover{background:rgba(67,133,255,.18); border-color:var(--signal); color:var(--signal); box-shadow:inset 0 1px 0 rgba(255,255,255,.3), 0 0 20px rgba(67,133,255,.28)}
+body.theme-dark .mode.on,body.theme-dark .omode.on{background:var(--signal); color:#04111a; border-color:var(--signal); box-shadow:0 0 22px rgba(67,133,255,.45)}
+body.theme-dark .chip{background:rgba(10,20,36,.55); color:var(--dim); border-color:rgba(255,255,255,.16)}
+body.theme-dark .link{background:rgba(255,255,255,.06); border-color:rgba(255,255,255,.16); color:var(--bone)}
+body.theme-dark .sw{background:rgba(255,255,255,.06); border-color:rgba(255,255,255,.14)} body.theme-dark .sw::after{background:#5d78a0}
+body.theme-dark .sw.on{background:linear-gradient(90deg,var(--signal-d),var(--signal)); border-color:var(--signal)} body.theme-dark .sw.on::after{background:#04111a}
+body.theme-dark input[type=range]{background:linear-gradient(90deg,var(--signal) calc(var(--p,50)*1%), rgba(255,255,255,.14) 0)}
+body.theme-dark .meter{background:rgba(255,255,255,.1)}
+
+/* ticker / 廣告 / toast / 螢幕 暗 */
+body.theme-dark .ticker{color:var(--muted)} body.theme-dark .ticker .it b{color:var(--bone)}
+body.theme-dark .promo-name{color:var(--bone)} body.theme-dark .promo-tag{color:var(--dim)}
+body.theme-dark .promo-cta{background:rgba(67,133,255,.14); border-color:var(--signal); color:var(--signal)}
+body.theme-dark .toast{background:rgba(14,26,46,.66); color:var(--bone); border-color:rgba(255,255,255,.18)}
+body.theme-dark .feval{color:var(--bone)} body.theme-dark .tg{border-bottom-color:rgba(255,255,255,.1)} body.theme-dark .oitem{border-color:rgba(255,255,255,.14)}
+body.theme-dark .scope{border:1px solid rgba(255,255,255,.16); box-shadow:0 0 0 1px rgba(67,133,255,.2), 0 26px 60px #000c, inset 0 1px 0 rgba(255,255,255,.2)}
 </style>
 </head>
 <body>
@@ -805,6 +859,7 @@ header::after{background:linear-gradient(90deg,#dcefff,transparent); box-shadow:
       <span class="sub">depth · measure console</span>
     </div>
     <div class="link" id="link"><span class="pip"></span><b id="linkTxt">AWAITING</b></div>
+    <button class="themebtn" id="themeToggle" title="切換亮/暗色模式">🌙 暗色</button>
   </header>
 
   <main>
@@ -1684,6 +1739,19 @@ async function doFaceEval(){
   });
 }
 $("#faceEval").addEventListener("click",doFaceEval);
+
+// 主題切換(亮/暗,記住選擇)
+(function(){
+  const tb=$("#themeToggle"); if(!tb) return;
+  const apply=t=>{ document.body.classList.toggle("theme-dark", t==="dark");
+    tb.textContent = t==="dark" ? "☀ 亮色" : "🌙 暗色";
+    try{ localStorage.setItem("d435_theme", t); }catch(e){} };
+  let saved="light"; try{ saved=localStorage.getItem("d435_theme")||"light"; }catch(e){}
+  const qp=new URLSearchParams(location.search).get("theme");
+  if(qp==="dark"||qp==="light") saved=qp;
+  apply(saved);
+  tb.addEventListener("click",()=>apply(document.body.classList.contains("theme-dark")?"light":"dark"));
+})();
 
 pushCfg();                 // 載入時把 UI 預設同步到後端
 syncInsp(); syncObs(); syncFace(); syncFaceEngine(); syncModeChips();
