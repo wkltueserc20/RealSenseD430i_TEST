@@ -592,11 +592,11 @@ body{
   --line:rgba(255,255,255,.55); --line2:rgba(255,255,255,.8);
   --signal:#2f54d6; --signal-d:#1d2f8f; --mint:#0e9e6b; --mint-d:#0a7a52; --warn:#e23b6d;
 }
-body{ background:linear-gradient(140deg,#7385ee 0%,#8a5bc6 38%,#bf70d6 66%,#f3a0f3 100%); background-attachment:fixed }
-.blobs{filter:blur(72px)} .blob{mix-blend-mode:soft-light; opacity:.7}
-.blob.b1{background:#5566e8} .blob.b2{background:#8a4fd0} .blob.b3{background:#f6a0f6; opacity:.6} .blob.b4{background:#6cc8ee; opacity:.5}
+body{ background:linear-gradient(140deg,#27409e 0%,#3a62e6 34%,#3f9ee4 66%,#8fd0ef 100%); background-attachment:fixed }
+.blobs{filter:blur(72px)} .blob{mix-blend-mode:soft-light; opacity:.72}
+.blob.b1{background:#3a5fe6} .blob.b2{background:#2f7fd8} .blob.b3{background:#8fd0ef; opacity:.6} .blob.b4{background:#56c8ec; opacity:.5}
 .fx.grid{opacity:.05; background-image:linear-gradient(#ffffff4d 1px,transparent 1px),linear-gradient(90deg,#ffffff4d 1px,transparent 1px)}
-.fx.vig{box-shadow:inset 0 0 200px 30px rgba(55,20,90,.22)} .fx.grain{opacity:.03; mix-blend-mode:overlay}
+.fx.vig{box-shadow:inset 0 0 200px 30px rgba(20,40,100,.22)} .fx.grain{opacity:.03; mix-blend-mode:overlay}
 body::before{background:linear-gradient(90deg,transparent,#fff 50%,transparent); box-shadow:0 0 12px #fffc}
 
 /* 亮玻璃面板 + 深色字 */
@@ -604,9 +604,9 @@ body::before{background:linear-gradient(90deg,transparent,#fff 50%,transparent);
   background:linear-gradient(160deg, rgba(255,255,255,.44), rgba(255,255,255,.2));
   -webkit-backdrop-filter:blur(24px) saturate(150%); backdrop-filter:blur(24px) saturate(150%);
   border:1px solid rgba(255,255,255,.6); color:var(--bone);
-  box-shadow:0 18px 48px rgba(55,25,95,.26), inset 0 1px 0 rgba(255,255,255,.9), inset 0 0 30px rgba(255,255,255,.16)}
+  box-shadow:0 18px 48px rgba(22,42,108,.26), inset 0 1px 0 rgba(255,255,255,.9), inset 0 0 30px rgba(255,255,255,.16)}
 .panel::after,.readout::after,.credit.promo::after{background:linear-gradient(160deg, rgba(255,255,255,.45), transparent 30%)}
-.panel:hover,.readout:hover{border-color:#fff; box-shadow:0 22px 54px rgba(55,25,95,.32), inset 0 1px 0 #fff, 0 0 26px rgba(47,84,214,.2)}
+.panel:hover,.readout:hover{border-color:#fff; box-shadow:0 22px 54px rgba(22,42,108,.32), inset 0 1px 0 #fff, 0 0 26px rgba(47,84,214,.2)}
 .panel h2,.ahead h2,.rhead .k{color:var(--muted)} .panel h2::before{background:var(--signal); box-shadow:0 0 8px var(--signal)}
 .metric{border-bottom-color:rgba(40,20,80,.13)} .metric .lab,.slider .row label,.hint,.tline,.metric .val small,.npts,.ahint{color:var(--muted)}
 .metric .val{color:var(--bone)} .metric .val.live{color:var(--signal)} .tline b{color:var(--mint-d)}
@@ -639,7 +639,7 @@ header::after{background:linear-gradient(90deg,var(--signal),transparent); box-s
 
 /* 螢幕(相機)維持深色顯示屏 + 亮玻璃外框 */
 .scope{border:1px solid rgba(255,255,255,.7);
-  box-shadow:0 0 0 1px rgba(255,255,255,.35), 0 26px 58px rgba(55,25,95,.4), inset 0 1px 0 rgba(255,255,255,.3)}
+  box-shadow:0 0 0 1px rgba(255,255,255,.35), 0 26px 58px rgba(22,42,108,.4), inset 0 1px 0 rgba(255,255,255,.3)}
 
 /* verdict / toast / 其他 */
 .verdict.ok .vv{color:var(--mint)} .verdict.ng .vv{color:var(--warn)} .verdict.idle .vv{color:var(--muted)} .verdict .vs{color:var(--muted)}
