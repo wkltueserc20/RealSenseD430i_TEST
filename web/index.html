@@ -590,7 +590,7 @@ body{
 :root{
   --bone:#1d1838; --dim:#4a3f6e; --muted:#6f6594;
   --line:rgba(255,255,255,.55); --line2:rgba(255,255,255,.8);
-  --signal:#7b3ff0; --signal-d:#5a22c9; --mint:#0e9e6b; --mint-d:#0a7a52; --warn:#e23b6d;
+  --signal:#2f54d6; --signal-d:#1d2f8f; --mint:#0e9e6b; --mint-d:#0a7a52; --warn:#e23b6d;
 }
 body{ background:linear-gradient(140deg,#7385ee 0%,#8a5bc6 38%,#bf70d6 66%,#f3a0f3 100%); background-attachment:fixed }
 .blobs{filter:blur(72px)} .blob{mix-blend-mode:soft-light; opacity:.7}
@@ -606,7 +606,7 @@ body::before{background:linear-gradient(90deg,transparent,#fff 50%,transparent);
   border:1px solid rgba(255,255,255,.6); color:var(--bone);
   box-shadow:0 18px 48px rgba(55,25,95,.26), inset 0 1px 0 rgba(255,255,255,.9), inset 0 0 30px rgba(255,255,255,.16)}
 .panel::after,.readout::after,.credit.promo::after{background:linear-gradient(160deg, rgba(255,255,255,.45), transparent 30%)}
-.panel:hover,.readout:hover{border-color:#fff; box-shadow:0 22px 54px rgba(55,25,95,.32), inset 0 1px 0 #fff, 0 0 26px rgba(123,63,240,.2)}
+.panel:hover,.readout:hover{border-color:#fff; box-shadow:0 22px 54px rgba(55,25,95,.32), inset 0 1px 0 #fff, 0 0 26px rgba(47,84,214,.2)}
 .panel h2,.ahead h2,.rhead .k{color:var(--muted)} .panel h2::before{background:var(--signal); box-shadow:0 0 8px var(--signal)}
 .metric{border-bottom-color:rgba(40,20,80,.13)} .metric .lab,.slider .row label,.hint,.tline,.metric .val small,.npts,.ahint{color:var(--muted)}
 .metric .val{color:var(--bone)} .metric .val.live{color:var(--signal)} .tline b{color:var(--mint-d)}
@@ -614,16 +614,16 @@ body::before{background:linear-gradient(90deg,transparent,#fff 50%,transparent);
 /* 控制元件:亮玻璃 */
 .btn,.mode,.omode,.frow input,.frename{background:rgba(255,255,255,.42); border:1px solid rgba(255,255,255,.6);
   color:var(--bone); box-shadow:inset 0 1px 0 rgba(255,255,255,.9)}
-.btn:hover,.mode:hover{background:rgba(255,255,255,.64); border-color:var(--signal); color:var(--signal); box-shadow:inset 0 1px 0 #fff, 0 0 18px rgba(123,63,240,.22)}
-.mode.on,.omode.on{background:var(--signal); color:#fff; border-color:var(--signal); box-shadow:0 6px 18px rgba(123,63,240,.42)}
+.btn:hover,.mode:hover{background:rgba(255,255,255,.64); border-color:var(--signal); color:var(--signal); box-shadow:inset 0 1px 0 #fff, 0 0 18px rgba(47,84,214,.22)}
+.mode.on,.omode.on{background:var(--signal); color:#fff; border-color:var(--signal); box-shadow:0 6px 18px rgba(47,84,214,.42)}
 .btn.hot{color:var(--signal); border-color:var(--signal)}
 .chip{background:rgba(255,255,255,.6); color:var(--dim); border-color:rgba(255,255,255,.7)}
 .chip.live{color:var(--mint-d); border-color:#0e9e6b77} .chip.warn{color:var(--warn); border-color:#e23b6d77}
 .link{background:rgba(255,255,255,.42); border-color:rgba(255,255,255,.6); color:var(--bone)} .link.on{border-color:#0e9e6b99}
 .sw{background:rgba(255,255,255,.52); border-color:rgba(255,255,255,.65)} .sw::after{background:#9d92cf}
-.sw.on{background:linear-gradient(90deg,var(--signal-d),var(--signal)); border-color:var(--signal); box-shadow:0 0 12px rgba(123,63,240,.5)} .sw.on::after{background:#fff}
+.sw.on{background:linear-gradient(90deg,var(--signal-d),var(--signal)); border-color:var(--signal); box-shadow:0 0 12px rgba(47,84,214,.5)} .sw.on::after{background:#fff}
 input[type=range]{background:linear-gradient(90deg,var(--signal) calc(var(--p,50)*1%), rgba(40,20,80,.2) 0)}
-input[type=range]::-webkit-slider-thumb{background:var(--signal); box-shadow:0 0 0 4px rgba(123,63,240,.22), 0 0 8px var(--signal)}
+input[type=range]::-webkit-slider-thumb{background:var(--signal); box-shadow:0 0 0 4px rgba(47,84,214,.22), 0 0 8px var(--signal)}
 .slider .row b{color:var(--signal)} .meter{background:rgba(40,20,80,.16)} .meter .thr{background:var(--bone)}
 .meter .fill{background:linear-gradient(90deg,var(--warn),#e0a23a 45%,var(--mint))}
 
@@ -633,8 +633,8 @@ input[type=range]::-webkit-slider-thumb{background:var(--signal); box-shadow:0 0
 header::after{background:linear-gradient(90deg,var(--signal),transparent); box-shadow:0 0 10px var(--signal)}
 .ticker{color:var(--muted)} .ticker .it b{color:var(--bone)} .ticker .it b.ok{color:var(--mint-d)} .ticker .it b.no{color:var(--warn)}
 .promo-name{color:var(--bone)} .promo-name b{color:var(--signal)} .promo-tag{color:var(--dim)}
-.promo-cta{background:rgba(123,63,240,.12); border-color:var(--signal); color:var(--signal)}
-.promo-cta:hover{background:var(--signal); color:#fff; box-shadow:0 0 22px rgba(123,63,240,.5)}
+.promo-cta{background:rgba(47,84,214,.12); border-color:var(--signal); color:var(--signal)}
+.promo-cta:hover{background:var(--signal); color:#fff; box-shadow:0 0 22px rgba(47,84,214,.5)}
 .credit b{color:var(--signal)}
 
 /* 螢幕(相機)維持深色顯示屏 + 亮玻璃外框 */
@@ -645,7 +645,7 @@ header::after{background:linear-gradient(90deg,var(--signal),transparent); box-s
 .verdict.ok .vv{color:var(--mint)} .verdict.ng .vv{color:var(--warn)} .verdict.idle .vv{color:var(--muted)} .verdict .vs{color:var(--muted)}
 .toast{background:rgba(255,255,255,.72); color:var(--bone); border-color:rgba(255,255,255,.8); border-left-color:var(--signal)}
 .feval{color:var(--bone)} .feval a{color:var(--signal)} .oitem{border-color:rgba(40,20,80,.18)} .tg{border-bottom-color:rgba(40,20,80,.12)}
-::selection{background:#7b3ff044; color:var(--bone)}
+::selection{background:#2f54d644; color:var(--bone)}
 </style>
 </head>
 <body>
