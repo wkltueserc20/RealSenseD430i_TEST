@@ -646,6 +646,14 @@ header::after{background:linear-gradient(90deg,var(--signal),transparent); box-s
 .toast{background:rgba(255,255,255,.72); color:var(--bone); border-color:rgba(255,255,255,.8); border-left-color:var(--signal)}
 .feval{color:var(--bone)} .feval a{color:var(--signal)} .oitem{border-color:rgba(40,20,80,.18)} .tg{border-bottom-color:rgba(40,20,80,.12)}
 ::selection{background:#2f54d644; color:var(--bone)}
+
+/* ── 藍底對比修正:直接落在背景上的文字改淺色 ── */
+.mark h1{color:#ffffff}
+.mark h1 i{color:#bfe2ff}
+.mark .sub{color:#d6e9ff; opacity:.95}
+.mark .dot{background:#ffffff; box-shadow:0 0 14px #ffffffd0}
+header::after{background:linear-gradient(90deg,#dcefff,transparent); box-shadow:0 0 10px #a9d4ff}
+.hint{color:rgba(255,255,255,.86)}
 </style>
 </head>
 <body>
