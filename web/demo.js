@@ -49,9 +49,9 @@
       {im:L("demo/o_alert.png"), person:[0.24,0.05,0.79,0.98], near:true},
     ],
     pose:[
-      {im:L("demo/s_stand.png"), kp:{head:[.50,.10],neck:[.50,.17],ls:[.40,.21],rs:[.60,.21],
-        le:[.35,.34],re:[.65,.34],lw:[.33,.46],rw:[.67,.46],hc:[.50,.52],lh:[.44,.52],rh:[.56,.52],
-        lk:[.45,.72],rk:[.55,.72],la:[.46,.95],ra:[.54,.95]}},
+      {im:L("demo/s_stand.png"), kp:{head:[.50,.15],neck:[.50,.22],ls:[.36,.25],rs:[.64,.25],
+        le:[.33,.39],re:[.67,.39],lw:[.34,.53],rw:[.66,.53],hc:[.50,.55],lh:[.44,.55],rh:[.56,.55],
+        lk:[.46,.74],rk:[.54,.74],la:[.47,.94],ra:[.53,.94]}},
       {im:L("demo/s_gesture.png"), hand:[0.10,0.26,0.32,0.58], gesture:true},
     ],
   };
@@ -134,8 +134,8 @@
     return e.near?"🚧 障礙物檢測 · 物體進入範圍!0.6 m → 警報":"🚧 障礙物檢測 · 範圍內無障礙 · 安全";
   }
   function scenePose(depth){
-    const e=IMG.pose[depth?0:Math.floor(S.t/5)%IMG.pose.length];
-    if(depth){ depthBg(); return "🌈 深度圖 · 近紅遠藍,越凸越近(可做活體/距離)"; }
+    if(depth) return depthView();
+    const e=IMG.pose[Math.floor(S.t/5)%IMG.pose.length];
     const r=drawPhoto(e.im);
     if(e.gesture){ const h=fr(r,e.hand[0],e.hand[1],e.hand[2],e.hand[3]);
       g.lineWidth=3; g.strokeStyle="#ff7a1a"; g.strokeRect(h[0],h[1],h[2],h[3]);
@@ -148,10 +148,35 @@
     g.fillStyle="#ff4e6a"; for(const k in P){ g.beginPath(); g.arc(P[k][0],P[k][1],5,0,7); g.fill(); }
     return "👁 監看 · 即時人體骨架追蹤(跌倒會警報)";
   }
-  function depthBg(){ for(let y=0;y<W;y+=6){ g.fillStyle=jet(0.12+0.55*(y/W)); g.fillRect(0,y,W,6); }
-    const cx=W*0.5,hy=W*0.32,R=W*0.1;
-    g.fillStyle=jet(0.9); g.beginPath(); g.ellipse(cx,hy,R*0.95,R*1.1,0,0,7); g.fill();
-    g.fillStyle=jet(0.83); g.fillRect(cx-R*1.4,hy+R*1.2,R*2.8,R*2.6); }
+  // 真實深度視覺化:把真實照片轉成 turbo 深度色圖(主體近=暖、背景遠=冷)
+  const jetRGB = t => { t=Math.max(0,Math.min(1,t));
+    return [Math.max(0,Math.min(1,1.5-Math.abs(4*t-3)))*255|0,
+            Math.max(0,Math.min(1,1.5-Math.abs(4*t-2)))*255|0,
+            Math.max(0,Math.min(1,1.5-Math.abs(4*t-1)))*255|0]; };
+  const DEPTH=[IMG.obstacle[0].im, IMG.pose[0].im]; const depthCache={};
+  function buildDepth(im,key){
+    const sm=180, oc=document.createElement("canvas"); oc.width=oc.height=sm; const og=oc.getContext("2d");
+    const ar=im.naturalWidth/im.naturalHeight; let w=sm,h=sm/ar; if(h>sm){h=sm;w=sm*ar;}
+    const dx=(sm-w)/2, dy=(sm-h)/2;
+    og.fillStyle="#000"; og.fillRect(0,0,sm,sm); og.drawImage(im,dx,dy,w,h);
+    const id=og.getImageData(0,0,sm,sm), p=id.data;
+    for(let j=0;j<sm;j++) for(let i=0;i<sm;i++){ const k=(j*sm+i)*4; let dep;
+      if(i<dx||i>dx+w||j<dy||j>dy+h) dep=0.04;     // 補邊→遠
+      else { const lum=(0.299*p[k]+0.587*p[k+1]+0.114*p[k+2])/255;
+        const cx=(i-sm/2)/(sm/2), cy=(j-sm/2)/(sm/2), cen=1-Math.min(1,Math.hypot(cx,cy));
+        dep=0.5*(1-lum)+0.32*cen+0.18*(j/sm); }
+      const c=jetRGB(Math.max(0,Math.min(1,dep))); p[k]=c[0]; p[k+1]=c[1]; p[k+2]=c[2]; }
+    og.putImageData(id,0,0); depthCache[key]=oc;
+  }
+  function depthView(){
+    const idx=Math.floor(S.t/5)%DEPTH.length, im=DEPTH[idx];
+    if(!depthCache[idx]){
+      if(im.complete&&im.naturalWidth) buildDepth(im,idx);
+      else { g.fillStyle="#06121f"; g.fillRect(0,0,W,W); return "🌈 深度圖 · 載入中…"; } }
+    g.imageSmoothingEnabled=false; g.fillStyle="#000"; g.fillRect(0,0,W,W);
+    g.drawImage(depthCache[idx],0,0,W,W); g.imageSmoothingEnabled=true;
+    return "🌈 深度圖 · 近紅遠藍(真實深度視覺化,可做距離/活體偵測)";
+  }
   function sceneIdle(){ g.fillStyle="#0e141b"; g.fillRect(0,0,W,W);
     g.fillStyle="#9fb0c4"; g.font="600 22px 'Noto Sans TC',sans-serif"; g.textAlign="center";
     g.fillText("← 點右側功能來體驗",W/2,W/2-10); g.fillText("或靜置看自動導覽",W/2,W/2+24); g.textAlign="left";
@@ -238,7 +263,7 @@
   const setDepth=w=>{ const sw=document.querySelector('.sw[data-k="depth"]'); if(sw&&sw.classList.contains("on")!==w) sw.click(); };
   const STEPS=[{mode:"measure",depth:false},{mode:"inspect",depth:false},{mode:"obstacle",depth:false},
                {mode:"face",depth:false},{mode:"watch",depth:false},{mode:"watch",depth:true}];
-  setInterval(()=>{ if(!touring()) return; const s=STEPS[step++%STEPS.length]; setDepth(s.depth); clickMode(s.mode); }, 9000);
+  setInterval(()=>{ if(!touring()) return; const s=STEPS[step++%STEPS.length]; setDepth(s.depth); clickMode(s.mode); }, 3000);
 
   const badge=document.createElement("div");
   badge.textContent="● DEMO 模擬資料（無後端）";
