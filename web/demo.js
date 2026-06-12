@@ -36,9 +36,9 @@
       {im:L("demo/face4.png"), name:"未知", box:[0.22,0.10,0.80,0.66], unknown:true},
     ],
     measure:[
-      {im:L("demo/m_box.png"),    box:[0.13,0.22,0.88,0.82], dims:[24.3,18.0,16.1]},
-      {im:L("demo/m_bottle.png"), box:[0.40,0.07,0.60,0.90], dims:[6.5,6.5,21.5]},
-      {im:L("demo/m_mug.png"),    box:[0.20,0.30,0.63,0.83], dims:[9.6,8.2,9.8]},
+      {im:L("demo/m_box.png"),    box:[0.17,0.21,0.85,0.76], dims:[24.3,18.0,16.1]},
+      {im:L("demo/m_bottle.png"), box:[0.39,0.16,0.61,0.86], dims:[6.5,6.5,21.5]},
+      {im:L("demo/m_mug.png"),    box:[0.22,0.26,0.74,0.78], dims:[9.6,8.2,9.8]},
     ],
     inspect:[
       {im:L("demo/i_pcb.png"),  box:[0.09,0.10,0.93,0.92]},
@@ -48,11 +48,14 @@
       {im:L("demo/o_safe.png"),  person:[0.46,0.44,0.54,0.64], near:false},
       {im:L("demo/o_alert.png"), person:[0.24,0.05,0.79,0.98], near:true},
     ],
-    pose:[
-      {im:L("demo/s_stand.png"), kp:{head:[.50,.15],neck:[.50,.22],ls:[.36,.25],rs:[.64,.25],
-        le:[.33,.39],re:[.67,.39],lw:[.34,.53],rw:[.66,.53],hc:[.50,.55],lh:[.44,.55],rh:[.56,.55],
-        lk:[.46,.74],rk:[.54,.74],la:[.47,.94],ra:[.53,.94]}},
+    pose:[   // kp = 真實 MediaPipe 偵測座標(normalized) → 精準對齊
+      {im:L("demo/s_stand.png"), kp:{head:[.505,.213],neck:[.505,.305],ls:[.662,.304],rs:[.347,.306],
+        le:[.706,.417],re:[.294,.422],lw:[.732,.521],rw:[.263,.523],hc:[.501,.529],lh:[.589,.528],rh:[.413,.53],
+        lk:[.587,.702],rk:[.393,.698],la:[.596,.858],ra:[.387,.856]}},
       {im:L("demo/s_gesture.png"), hand:[0.10,0.26,0.32,0.58], gesture:true},
+      {im:L("demo/s_fall.png"), fallen:true, kp:{head:[.252,.326],neck:[.308,.380],ls:[.343,.325],rs:[.272,.434],
+        le:[.434,.351],re:[.297,.533],lw:[.52,.333],rw:[.305,.655],hc:[.465,.469],lh:[.477,.435],rh:[.452,.502],
+        lk:[.614,.449],rk:[.562,.65],la:[.757,.526],ra:[.689,.811]}},
     ],
   };
 
@@ -133,20 +136,21 @@
     if(e.near) tag(p[0], p[1]-6, "⚠ 障礙 0.6 m", "#ff7a6a", true);
     return e.near?"🚧 障礙物檢測 · 物體進入範圍!0.6 m → 警報":"🚧 障礙物檢測 · 範圍內無障礙 · 安全";
   }
+  const curPose = () => IMG.pose[Math.floor(S.t/5)%IMG.pose.length];
   function scenePose(depth){
     if(depth) return depthView();
-    const e=IMG.pose[Math.floor(S.t/5)%IMG.pose.length];
-    const r=drawPhoto(e.im);
+    const e=curPose(), r=drawPhoto(e.im);
     if(e.gesture){ const h=fr(r,e.hand[0],e.hand[1],e.hand[2],e.hand[3]);
       g.lineWidth=3; g.strokeStyle="#ff7a1a"; g.strokeRect(h[0],h[1],h[2],h[3]);
       const s=gestureNow(); tag(h[0],h[1]-6,"✋ "+s.g+" · "+s.n+"指","#ff9a3c",true);
       return "👁 監看 · 手勢辨識(可控制機器人)"; }
     const P={}; for(const k in e.kp){ P[k]=[r.x+e.kp[k][0]*r.w, r.y+e.kp[k][1]*r.h]; }
-    g.strokeStyle="#3df58a"; g.lineWidth=4; g.lineCap="round";
+    g.strokeStyle=e.fallen?"#ff5a48":"#3df58a"; g.lineWidth=4; g.lineCap="round";
     for(const[a,b] of [["head","neck"],["neck","ls"],["neck","rs"],["ls","le"],["le","lw"],["rs","re"],["re","rw"],
       ["neck","hc"],["hc","lh"],["hc","rh"],["lh","lk"],["lk","la"],["rh","rk"],["rk","ra"]]) line(P[a][0],P[a][1],P[b][0],P[b][1]);
-    g.fillStyle="#ff4e6a"; for(const k in P){ g.beginPath(); g.arc(P[k][0],P[k][1],5,0,7); g.fill(); }
-    return "👁 監看 · 即時人體骨架追蹤(跌倒會警報)";
+    g.fillStyle="#ffd23c"; for(const k in P){ g.beginPath(); g.arc(P[k][0],P[k][1],5,0,7); g.fill(); }
+    if(e.fallen){ tag(20,42,"⚠ 偵測到跌倒 / 躺下","#ff7a6a",true); return "👁 監看 · ⚠ 偵測到跌倒 → 觸發警報視窗"; }
+    return "👁 監看 · 即時人體骨架追蹤(跌倒會自動警報)";
   }
   // 真實深度視覺化:把真實照片轉成 turbo 深度色圖(主體近=暖、背景遠=冷)
   const jetRGB = t => { t=Math.max(0,Math.min(1,t));
@@ -212,6 +216,7 @@
       fallen:false, tilt:0, roll:+(Math.sin(S.t*0.5)*2).toFixed(1), measure:null, picked:false,
       has_template:false, detect:false, n_views:0, matched:false, match_via:"", inspect:null, msg:S.msg };
     if(c.hands){ const s=gestureNow(); st.gesture=s.g; st.fingers=s.n; }
+    if((c.pose||c.hands) && curPose().fallen && !touring()){ st.fallen=true; st.tilt=78; }  // 跌倒→警報(導覽時不彈窗以免擋畫面)
     if(c.measure) st.measure=measureVals();
     if(c.inspect) st.inspect=inspectVals();
     const names=Object.keys(S.faces); st.faces_db=names.map(n=>({name:n,samples:S.faces[n]}));
@@ -264,6 +269,10 @@
   const STEPS=[{mode:"measure",depth:false},{mode:"inspect",depth:false},{mode:"obstacle",depth:false},
                {mode:"face",depth:false},{mode:"watch",depth:false},{mode:"watch",depth:true}];
   setInterval(()=>{ if(!touring()) return; const s=STEPS[step++%STEPS.length]; setDepth(s.depth); clickMode(s.mode); }, 3000);
+  // 跌倒警報視窗演示後自動關閉(避免擋住導覽)
+  setInterval(()=>{ const f=document.getElementById("fall"); if(!f) return;
+    if(f.classList.contains("show")){ if(!f._since) f._since=now(); if(now()-f._since>4500){ f.classList.remove("show"); f._since=0; } }
+    else f._since=0; }, 500);
 
   const badge=document.createElement("div");
   badge.textContent="● DEMO 模擬資料（無後端）";
