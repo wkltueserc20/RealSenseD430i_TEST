@@ -475,8 +475,8 @@ input[type=range]::-webkit-slider-thumb:hover{box-shadow:0 0 0 7px #27d6f033, 0 
 /* ── 公司品牌(深底用淺色徽板襯托 navy logo) ── */
 .brand{display:flex; align-items:center; margin-right:6px; padding-right:18px;
   border-right:1px solid var(--line); transition:opacity .2s, transform .2s}
-.brand .ctlogo{height:54px; aspect-ratio:2.5; display:block; padding:5px 9px;
-  background:#eef4fb; border-radius:8px; box-shadow:0 0 22px #27d6f03a, 0 4px 14px #0006}
+.brand .ctlogo{height:42px; aspect-ratio:2.84; display:block;
+  filter:brightness(0) invert(1) drop-shadow(0 0 5px #27d6f088)}
 .brand:hover{opacity:.9; transform:translateY(-1px)}
 .credit{margin-top:26px; display:flex; justify-content:center; align-items:center;
   gap:12px; padding:16px 0 4px; border-top:1px solid var(--line);
@@ -500,8 +500,9 @@ input[type=range]::-webkit-slider-thumb:hover{box-shadow:0 0 0 7px #27d6f033, 0 
   animation:shine 5.5s ease-in-out infinite; pointer-events:none}
 @keyframes shine{0%{left:-55%} 58%,100%{left:140%}}
 .promo-logo{display:block; line-height:0; position:relative; z-index:1}
-.promo-logo .ctlogo{height:66px; aspect-ratio:2.5; padding:8px 14px; background:#eef4fb;
-  border-radius:11px; box-shadow:0 0 26px #27d6f044, 0 8px 20px #0007; display:block; transition:.25s}
+.promo-logo .ctlogo{height:56px; aspect-ratio:2.84; display:block; transition:.25s;
+  background:none; padding:0; border-radius:0; box-shadow:none;
+  filter:brightness(0) invert(1) drop-shadow(0 0 8px #27d6f099)}
 .promo-logo:hover .ctlogo{transform:translateY(-2px); box-shadow:0 0 36px #27d6f066, 0 12px 26px #0008}
 .promo-txt{display:flex; flex-direction:column; gap:5px; position:relative; z-index:1}
 .promo-name{font-family:"Chakra Petch","Noto Sans TC",sans-serif; font-size:24px; font-weight:700;
@@ -657,7 +658,7 @@ input[type=range]::-webkit-slider-thumb:hover{box-shadow:0 0 0 7px #27d6f033, 0 
 <div class="wrap">
   <header>
     <a class="brand" href="https://www.ching-tech.com" target="_blank" rel="noopener">
-      <svg class="ctlogo" role="img" aria-label="Ching Tech"><use href="#ctlogo"/></svg>
+      <svg class="ctlogo" role="img" aria-label="Ching Tech" viewBox="9 6 71 25"><use href="#ctlogo"/></svg>
     </a>
     <div class="mark">
       <span class="dot"></span>
@@ -833,7 +834,7 @@ input[type=range]::-webkit-slider-thumb:hover{box-shadow:0 0 0 7px #27d6f033, 0 
 
   <footer class="credit promo">
     <a class="promo-logo" href="https://www.ching-tech.com" target="_blank" rel="noopener">
-      <svg class="ctlogo" role="img" aria-label="Ching Tech"><use href="#ctlogo"/></svg>
+      <svg class="ctlogo" role="img" aria-label="Ching Tech" viewBox="9 6 71 25"><use href="#ctlogo"/></svg>
     </a>
     <div class="promo-txt">
       <div class="promo-name">擎添工業 <b>CHING TECH</b></div>
