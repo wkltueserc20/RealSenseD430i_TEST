@@ -518,25 +518,30 @@ input[type=range]::-webkit-slider-thumb:hover{box-shadow:0 0 0 7px #27d6f033, 0 
   .promo-logo .ctlogo{height:52px}}
 
 /* ════════════════ LIQUID GLASS 液態玻璃層 ════════════════ */
-/* 鮮豔極光背景(讓玻璃模糊吃到顏色) */
+/* 參考頁配色:靛藍 #667eea → 紫 #764ba2 → 粉 #f093fb(深色化保可讀性) */
 body{
   background:
-    radial-gradient(46% 42% at 10% 6%, #1f78c8 0%, transparent 62%),
-    radial-gradient(44% 40% at 92% 4%, #7b3fd6 0%, transparent 60%),
-    radial-gradient(52% 48% at 84% 96%, #0fa39a 0%, transparent 62%),
-    radial-gradient(46% 46% at 4% 98%, #2740c4 0%, transparent 62%),
-    radial-gradient(70% 60% at 50% 50%, #0a1b33 0%, #060a14 75%),
-    #060a14;
+    radial-gradient(48% 44% at 12% 4%, #5566d6 0%, transparent 60%),
+    radial-gradient(46% 42% at 90% 2%, #7846c4 0%, transparent 58%),
+    radial-gradient(52% 48% at 88% 98%, #c259d8 0%, transparent 60%),
+    radial-gradient(46% 46% at 2% 98%, #4636c8 0%, transparent 60%),
+    radial-gradient(85% 75% at 50% 45%, #160f30 0%, #08060f 78%),
+    #08060f;
   background-attachment:fixed;
 }
-.fx.aurora{z-index:-1; inset:-25%;
-  background:
-    radial-gradient(38% 38% at 28% 30%, #22d3ee55, transparent 62%),
-    radial-gradient(40% 40% at 72% 58%, #a855f74d, transparent 62%),
-    radial-gradient(42% 42% at 52% 84%, #14e0c255, transparent 62%);
-  filter:blur(46px); animation:aurora 20s ease-in-out infinite}
-@keyframes aurora{0%,100%{transform:translate(0,0) scale(1)}
-  33%{transform:translate(3%,-2.5%) scale(1.08)} 66%{transform:translate(-2.5%,3%) scale(1.05)}}
+/* 有機流動形狀(morphing blob):邊角圓度變形 + 漂浮 */
+.blobs{position:fixed; inset:0; z-index:-1; pointer-events:none; overflow:hidden; filter:blur(62px)}
+.blob{position:absolute; width:46vw; height:46vw; opacity:.5; mix-blend-mode:screen;
+  animation:morph 16s ease-in-out infinite, drift 22s ease-in-out infinite}
+.blob.b1{background:#667eea; top:-12%; left:-8%}
+.blob.b2{background:#764ba2; top:-8%; right:-10%; animation-delay:-4s,-3s}
+.blob.b3{background:#f093fb; bottom:-16%; left:14%; animation-delay:-8s,-7s; opacity:.42}
+.blob.b4{background:#27d6f0; bottom:-10%; right:4%; animation-delay:-12s,-11s; opacity:.4}
+@keyframes morph{0%,100%{border-radius:60% 40% 30% 70% / 60% 30% 70% 40%}
+  50%{border-radius:30% 60% 70% 40% / 50% 60% 30% 60%}}
+@keyframes drift{0%,100%{transform:translate(0,0) rotate(0deg) scale(1)}
+  33%{transform:translate(5%,-4%) rotate(10deg) scale(1.08)}
+  66%{transform:translate(-4%,5%) rotate(-8deg) scale(1.04)}}
 .fx.grid{opacity:.05}
 
 /* 玻璃面板:半透明 + 強模糊 + 玻璃緣高光 */
@@ -717,7 +722,7 @@ body{
      inkscape:groupmode="layer"
      id="layer2"
      inkscape:label="Layer 2" /></symbol></svg>
-<div class="fx aurora"></div>
+<div class="blobs"><span class="blob b1"></span><span class="blob b2"></span><span class="blob b3"></span><span class="blob b4"></span></div>
 <div class="fx grid"></div><div class="fx grain"></div><div class="fx vig"></div>
 
 <div class="wrap">
