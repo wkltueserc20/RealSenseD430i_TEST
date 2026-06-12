@@ -6,7 +6,7 @@
 <title>D435i · 光學深度量測台</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Orbitron:wght@500;700;900&family=Share+Tech+Mono&family=IBM+Plex+Mono:wght@400;500;600&family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet" />
 <style>
 :root{
   --ink:#141009; --ink2:#1a160e; --panel:#201b12; --panel2:#28221688;
@@ -662,52 +662,77 @@ header::after{background:linear-gradient(90deg,#dcefff,transparent); box-shadow:
   -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px); box-shadow:inset 0 1px 0 rgba(255,255,255,.9); transition:.2s}
 .themebtn:hover{background:rgba(255,255,255,.62); border-color:var(--signal); color:var(--signal)}
 
-/* ════════════════ DARK MODE 暗色模式 ════════════════ */
+/* ════════════════ DARK MODE = CYBERPUNK 賽博龐克 ════════════════ */
 body.theme-dark{
-  --bone:#e6eefc; --dim:#a6bcd9; --muted:#6f87a8;
-  --line:rgba(255,255,255,.14); --line2:rgba(255,255,255,.26);
-  --signal:#4385ff; --signal-d:#2257d8; --mint:#3ee6a4; --mint-d:#1aa874; --warn:#ff5d6e;
-  background:linear-gradient(150deg,#081325 0%,#0a1c40 38%,#0c2748 66%,#0e3450 100%);
+  --bone:#eafdff; --dim:#7fd6dd; --muted:#4f7e86;
+  --line:rgba(0,255,255,.3); --line2:rgba(0,255,255,.5);
+  --signal:#00ffff; --signal-d:#00b8b8; --mint:#39ff8a; --mint-d:#16c46a; --warn:#ff2e6e;
+  background:
+    radial-gradient(50% 45% at 12% 6%, #0a3a48 0%, transparent 60%),
+    radial-gradient(48% 44% at 90% 4%, #3a0a44 0%, transparent 58%),
+    radial-gradient(55% 50% at 86% 98%, #0a2348 0%, transparent 60%),
+    #03040a;
 }
-body.theme-dark::before{background:linear-gradient(90deg,transparent,var(--signal) 30%,#bfe2ff 50%,var(--signal) 70%,transparent); box-shadow:0 0 14px var(--signal)}
-body.theme-dark .blob{mix-blend-mode:screen; opacity:.46}
-body.theme-dark .blob.b1{background:#2a52d6} body.theme-dark .blob.b2{background:#1f6fc8}
-body.theme-dark .blob.b3{background:#3aa0e0; opacity:.4} body.theme-dark .blob.b4{background:#2bc0e0; opacity:.36}
-body.theme-dark .fx.grid{opacity:.06; background-image:linear-gradient(#4385ff26 1px,transparent 1px),linear-gradient(90deg,#4385ff26 1px,transparent 1px)}
-body.theme-dark .fx.vig{box-shadow:inset 0 0 260px 60px #000c, inset 0 0 80px #0008}
-body.theme-dark .fx.grain{mix-blend-mode:overlay; opacity:.045}
+/* 掃描線 scanline 疊全頁 */
+body.theme-dark .fx.grid{opacity:1; background-size:auto; -webkit-mask-image:none; mask-image:none;
+  background-image:repeating-linear-gradient(0deg, rgba(0,255,255,.05) 0 1px, transparent 1px 3px)}
+body.theme-dark .fx.vig{box-shadow:inset 0 0 280px 70px #000d, inset 0 0 90px #000a}
+body.theme-dark .fx.grain{mix-blend-mode:overlay; opacity:.05}
+body.theme-dark::before{background:linear-gradient(90deg,transparent,#00ffff 25%,#ff00ff 50%,#00ffff 75%,transparent); box-shadow:0 0 16px #00ffff}
+/* 霓虹色塊 */
+body.theme-dark .blob{mix-blend-mode:screen; opacity:.4}
+body.theme-dark .blob.b1{background:#00e0ff} body.theme-dark .blob.b2{background:#ff00d4}
+body.theme-dark .blob.b3{background:#00ffd0; opacity:.3} body.theme-dark .blob.b4{background:#7a00ff; opacity:.32}
 
-/* 暗玻璃面板 + 淺色字 */
+/* Orbitron 顯示字 + 霓虹發光 */
+body.theme-dark .mark h1,body.theme-dark .metric .val,body.theme-dark .verdict .vv,body.theme-dark .abadge{font-family:"Orbitron","Chakra Petch",sans-serif; letter-spacing:1px}
+body.theme-dark .mark h1{color:#fff; text-shadow:0 0 8px #00ffff99, 0 0 18px #00ffff44}
+body.theme-dark .mark h1 i{color:#ff2bd6; text-shadow:0 0 7px #ff2bd6, 0 0 16px #ff2bd688; animation:neonflicker 6s infinite}
+body.theme-dark .mark .sub{color:#00ffff; text-shadow:0 0 6px #00ffff66; opacity:.9}
+body.theme-dark .mark .dot{background:#00ffff; box-shadow:0 0 12px #00ffff}
+body.theme-dark header::after{background:linear-gradient(90deg,#00ffff,#ff00ff,transparent); box-shadow:0 0 12px #00ffff}
+@keyframes neonflicker{0%,90%,100%{opacity:1} 92%{opacity:.35} 93%{opacity:1} 95%{opacity:.55} 96%{opacity:1}}
+
+/* 霓虹邊框面板(deep black + cyan 邊光) */
 body.theme-dark .panel,body.theme-dark .readout,body.theme-dark .ticker,body.theme-dark .arena-wrap,body.theme-dark .pc-wrap,body.theme-dark .credit.promo{
-  background:linear-gradient(160deg, rgba(30,50,82,.5), rgba(10,20,38,.46));
-  border:1px solid rgba(255,255,255,.13); color:var(--bone);
-  box-shadow:0 20px 50px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.28), inset 0 0 28px rgba(255,255,255,.03)}
-body.theme-dark .panel::after,body.theme-dark .readout::after,body.theme-dark .credit.promo::after{background:linear-gradient(160deg, rgba(255,255,255,.14), transparent 32%)}
-body.theme-dark .panel:hover,body.theme-dark .readout:hover{border-color:rgba(255,255,255,.24); box-shadow:0 24px 56px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.4), 0 0 30px rgba(67,133,255,.18)}
-body.theme-dark .panel h2,body.theme-dark .ahead h2,body.theme-dark .rhead .k{color:var(--muted)}
-body.theme-dark .metric{border-bottom-color:rgba(255,255,255,.1)}
-body.theme-dark .metric .lab,body.theme-dark .slider .row label,body.theme-dark .tline,body.theme-dark .metric .val small,body.theme-dark .npts,body.theme-dark .ahint{color:var(--muted)}
-body.theme-dark .metric .val{color:var(--bone)}
+  background:linear-gradient(160deg, rgba(7,18,28,.72), rgba(3,8,16,.7));
+  -webkit-backdrop-filter:blur(13px); backdrop-filter:blur(13px);
+  border:1px solid rgba(0,255,255,.32); border-radius:12px; color:var(--bone);
+  box-shadow:0 0 0 1px rgba(0,255,255,.06), 0 0 26px rgba(0,255,255,.12), inset 0 0 22px rgba(0,255,255,.05), 0 18px 44px #000d}
+body.theme-dark .panel::after,body.theme-dark .readout::after,body.theme-dark .credit.promo::after{background:linear-gradient(160deg, rgba(0,255,255,.1), transparent 30%)}
+body.theme-dark .panel:hover,body.theme-dark .readout:hover{border-color:rgba(0,255,255,.6); box-shadow:0 0 0 1px rgba(0,255,255,.12), 0 0 36px rgba(0,255,255,.28), inset 0 0 26px rgba(0,255,255,.08), 0 20px 48px #000d}
+body.theme-dark .panel h2,body.theme-dark .ahead h2,body.theme-dark .rhead .k{color:#00ffff; text-shadow:0 0 6px #00ffff55}
+body.theme-dark .panel h2::before{background:#ff00ff; box-shadow:0 0 8px #ff00ff}
+body.theme-dark .metric{border-bottom-color:rgba(0,255,255,.14)}
+body.theme-dark .metric .lab,body.theme-dark .slider .row label,body.theme-dark .tline,body.theme-dark .metric .val small,body.theme-dark .npts,body.theme-dark .ahint,body.theme-dark .hint{color:var(--dim)}
+body.theme-dark .metric .val{color:#fff; text-shadow:0 0 10px #00ffff66} body.theme-dark .metric .val.live{color:#00ffff; text-shadow:0 0 12px #00ffff}
 
-/* 控制元件 暗玻璃 */
+/* 控制元件:霓虹邊框 */
 body.theme-dark .btn,body.theme-dark .mode,body.theme-dark .omode,body.theme-dark .frow input,body.theme-dark .frename,body.theme-dark .themebtn{
-  background:rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.15); color:var(--bone); box-shadow:inset 0 1px 0 rgba(255,255,255,.22)}
-body.theme-dark .btn:hover,body.theme-dark .mode:hover,body.theme-dark .themebtn:hover{background:rgba(67,133,255,.18); border-color:var(--signal); color:var(--signal); box-shadow:inset 0 1px 0 rgba(255,255,255,.3), 0 0 20px rgba(67,133,255,.28)}
-body.theme-dark .mode.on,body.theme-dark .omode.on{background:var(--signal); color:#04111a; border-color:var(--signal); box-shadow:0 0 22px rgba(67,133,255,.45)}
-body.theme-dark .chip{background:rgba(10,20,36,.55); color:var(--dim); border-color:rgba(255,255,255,.16)}
-body.theme-dark .link{background:rgba(255,255,255,.06); border-color:rgba(255,255,255,.16); color:var(--bone)}
-body.theme-dark .sw{background:rgba(255,255,255,.06); border-color:rgba(255,255,255,.14)} body.theme-dark .sw::after{background:#5d78a0}
-body.theme-dark .sw.on{background:linear-gradient(90deg,var(--signal-d),var(--signal)); border-color:var(--signal)} body.theme-dark .sw.on::after{background:#04111a}
-body.theme-dark input[type=range]{background:linear-gradient(90deg,var(--signal) calc(var(--p,50)*1%), rgba(255,255,255,.14) 0)}
-body.theme-dark .meter{background:rgba(255,255,255,.1)}
+  background:rgba(0,255,255,.05); border:1px solid rgba(0,255,255,.3); color:var(--bone); border-radius:8px; box-shadow:inset 0 0 8px rgba(0,255,255,.06)}
+body.theme-dark .btn:hover,body.theme-dark .mode:hover,body.theme-dark .themebtn:hover{background:rgba(0,255,255,.12); border-color:#00ffff; color:#00ffff; box-shadow:0 0 16px #00ffff55, inset 0 0 10px #00ffff22; text-shadow:0 0 6px #00ffff}
+body.theme-dark .mode.on,body.theme-dark .omode.on{background:rgba(255,0,212,.16); color:#ff5be0; border-color:#ff00d4; box-shadow:0 0 20px #ff00d488, inset 0 0 14px #ff00d433; text-shadow:0 0 8px #ff00d4}
+body.theme-dark .btn.hot{color:#ff5be0; border-color:#ff00d4}
+body.theme-dark .chip{background:rgba(3,10,18,.7); color:var(--dim); border-color:rgba(0,255,255,.3)}
+body.theme-dark .chip.live{color:#39ff8a; border-color:#39ff8a66} body.theme-dark .chip.warn{color:#ff2e6e; border-color:#ff2e6e66}
+body.theme-dark .link{background:rgba(3,10,18,.6); border-color:rgba(0,255,255,.3); color:var(--bone)}
+body.theme-dark .link.on{border-color:#39ff8a88; box-shadow:0 0 14px #39ff8a33}
+body.theme-dark .sw{background:rgba(3,10,18,.7); border-color:rgba(0,255,255,.3)} body.theme-dark .sw::after{background:#2a6a72}
+body.theme-dark .sw.on{background:linear-gradient(90deg,#00b8b8,#00ffff); border-color:#00ffff; box-shadow:0 0 14px #00ffff88} body.theme-dark .sw.on::after{background:#03040a}
+body.theme-dark input[type=range]{background:linear-gradient(90deg,#00ffff calc(var(--p,50)*1%), rgba(0,255,255,.16) 0)}
+body.theme-dark input[type=range]::-webkit-slider-thumb{background:#00ffff; box-shadow:0 0 0 4px #00ffff22, 0 0 12px #00ffff}
+body.theme-dark .slider .row b{color:#00ffff; text-shadow:0 0 8px #00ffff66}
+body.theme-dark .meter{background:rgba(0,255,255,.1)} body.theme-dark .meter .fill{background:linear-gradient(90deg,#ff2e6e,#ffe600 45%,#00ffff)}
 
-/* ticker / 廣告 / toast / 螢幕 暗 */
-body.theme-dark .ticker{color:var(--muted)} body.theme-dark .ticker .it b{color:var(--bone)}
-body.theme-dark .promo-name{color:var(--bone)} body.theme-dark .promo-tag{color:var(--dim)}
-body.theme-dark .promo-cta{background:rgba(67,133,255,.14); border-color:var(--signal); color:var(--signal)}
-body.theme-dark .toast{background:rgba(14,26,46,.66); color:var(--bone); border-color:rgba(255,255,255,.18)}
-body.theme-dark .feval{color:var(--bone)} body.theme-dark .tg{border-bottom-color:rgba(255,255,255,.1)} body.theme-dark .oitem{border-color:rgba(255,255,255,.14)}
-body.theme-dark .scope{border:1px solid rgba(255,255,255,.16); box-shadow:0 0 0 1px rgba(67,133,255,.2), 0 26px 60px #000c, inset 0 1px 0 rgba(255,255,255,.2)}
+/* ticker / 廣告 / toast / verdict / 螢幕 */
+body.theme-dark .ticker{color:var(--dim)} body.theme-dark .ticker .it b{color:#fff} body.theme-dark .ticker .it b.ok{color:#39ff8a} body.theme-dark .ticker .it b.no{color:#ff2e6e}
+body.theme-dark .promo-name{color:#fff; text-shadow:0 0 8px #00ffff44} body.theme-dark .promo-name b{color:#ff2bd6; text-shadow:0 0 8px #ff2bd6} body.theme-dark .promo-tag{color:var(--dim)}
+body.theme-dark .promo-cta{background:rgba(0,255,255,.1); border-color:#00ffff; color:#00ffff} body.theme-dark .promo-cta:hover{background:#00ffff; color:#03040a; box-shadow:0 0 22px #00ffff88}
+body.theme-dark .toast{background:rgba(5,14,24,.8); color:var(--bone); border-color:rgba(0,255,255,.4); border-left-color:#ff00d4}
+body.theme-dark .feval{color:var(--bone)} body.theme-dark .feval a{color:#00ffff} body.theme-dark .tg{border-bottom-color:rgba(0,255,255,.14)} body.theme-dark .oitem{border-color:rgba(0,255,255,.22)}
+body.theme-dark .verdict.ok .vv{color:#39ff8a; text-shadow:0 0 14px #39ff8a} body.theme-dark .verdict.ng .vv{color:#ff2e6e; text-shadow:0 0 14px #ff2e6e}
+body.theme-dark .scope{border:1px solid rgba(0,255,255,.45); border-radius:12px; box-shadow:0 0 0 1px rgba(255,0,255,.2), 0 0 40px rgba(0,255,255,.25), 0 26px 60px #000e, inset 0 0 30px rgba(0,255,255,.06)}
+body.theme-dark .bracket{border-color:#00ffff; box-shadow:0 0 12px #00ffff}
 </style>
 </head>
 <body>
